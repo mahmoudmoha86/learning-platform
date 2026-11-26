@@ -62,7 +62,7 @@ const pages = {
   contactset() { settingsPage('التواصل والسوشيال', [['contact.email', 'البريد الإلكتروني'], ['contact.phone', 'الهاتف'], ['contact.whatsapp', 'واتساب (رقم بكود الدولة)'], ['contact.address', 'العنوان'], ['contact.hours', 'مواعيد العمل'], ['social.facebook', 'رابط فيسبوك'], ['social.youtube', 'رابط يوتيوب'], ['social.instagram', 'رابط إنستجرام'], ['social.twitter', 'رابط تويتر/X'], ['social.linkedin', 'رابط لينكدإن']]); },
   legal() { settingsPage('الشروط والخصوصية', [['terms', 'الشروط والأحكام', 'area'], ['privacy', 'سياسة الخصوصية', 'area']]); },
   async courses() {
-    const { data } = await sb.from('courses').select('*,profiles(full_name)').order('created_at', { ascending: false });
+    const { data } = await sb.from('courses').select('*,profiles!teacher_id(full_name)').order('created_at', { ascending: false });
     root.querySelector('#pg').innerHTML = `<div class="row"><h1 style="flex:1">الكورسات</h1><button class="btn y" id="nw">+ كورس جديد</button></div>${(data || []).map(c => `<div class="lrow"><div><b>${esc(c.title)}</b><div class="muted">${esc(c.profiles?.full_name || '')}</div></div><div><label>اسم المدرس المعروض</label><input data-id="${c.id}" data-k="instructor_name" value="${esc(c.instructor_name)}"></div>
     <select data-id="${c.id}" data-k="status">${Object.entries(stAr).map(([k, v]) => `<option value="${k}" ${k === c.status ? 'selected' : ''}>${v}</option>`).join('')}</select>
     <label><input type="checkbox" data-id="${c.id}" data-k="featured" ${c.featured ? 'checked' : ''} style="width:auto;margin:0 0 0 6px">مميّز</label>

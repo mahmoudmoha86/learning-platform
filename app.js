@@ -46,7 +46,7 @@ function courseCard(c, extra = '', link = null) {
   ${rv.length ? `<div class="stars">${stars(r)} <span class="muted">(${rv.length})</span></div>` : ''}${extra}
   <div style="margin-top:auto"><a class="btn s" href="${link || '#/course/' + c.id}">التفاصيل</a></div></div></div>`;
 }
-const CSEL = '*,profiles(full_name,avatar_url),reviews(rating)';
+const CSEL = '*,profiles!teacher_id(full_name,avatar_url),reviews(rating)';
 
 async function home() {
   const cnt = async (t, f) => { let q = sb.from(t).select('*', { count: 'exact', head: true }); if (f) q = q.eq(...f); return (await q).count || 0; };
@@ -87,7 +87,7 @@ async function courses(q) {
   $('#go').onclick = go; ['cat', 'lv', 'so'].forEach(i => $('#' + i).onchange = go); $('#s').onkeydown = e => { if (e.key === 'Enter') go(); };
 }
 async function course(id) {
-  const { data: c } = await sb.from('courses').select('*,profiles(id,full_name,bio,title,avatar_url)').eq('id', id).single();
+  const { data: c } = await sb.from('courses').select('*,profiles!teacher_id(id,full_name,bio,title,avatar_url)').eq('id', id).single();
   if (!c) { app.innerHTML = '<p>الكورس غير موجود.</p>'; return; }
   const [{ data: ls }, { data: rv }, { data: rel }] = await Promise.all([
     sb.from('lessons').select('id,title,position').eq('course_id', id).order('position'),
@@ -163,7 +163,7 @@ async function quiz(cid) {
 }
 async function cert(cid) {
   if (needLogin()) return;
-  const { data: c } = await sb.from('courses').select('title,instructor_name,profiles(full_name)').eq('id', cid).single();
+  const { data: c } = await sb.from('courses').select('title,instructor_name,profiles!teacher_id(full_name)').eq('id', cid).single();
   const pg = await progress(cid, me.id);
   if (!pg.total || pg.pct < 100) { app.innerHTML = `<div class="box"><p>أكمل جميع دروس الكورس أولًا للحصول على الشهادة.</p><a class="btn" href="#/learn/${cid}">متابعة الكورس</a></div>`; return; }
   app.innerHTML = `<div class="certwrap"><div class="cert"><div class="cborder"><div class="ctitle">شهادة إتمام</div><p>تشهد ${esc(S.name || 'المنصة')} بأن</p><div class="cname">${esc(me.full_name)}</div>
@@ -198,7 +198,7 @@ async function profilePage() {
 async function dashboard() {
   if (needLogin()) return;
   if (me.role !== 'student') return teacherDash();
-  const { data } = await sb.from('enrollments').select('course_id,courses(*,profiles(full_name))').eq('student_id', me.id);
+  const { data } = await sb.from('enrollments').select('course_id,courses(*,profiles!teacher_id(full_name))').eq('student_id', me.id);
   const rows = []; for (const e of data || []) rows.push({ c: e.courses, pg: await progress(e.course_id, me.id) });
   const { data: at } = await sb.from('quiz_attempts').select('score,total').eq('student_id', me.id);
   const done = rows.filter(r => r.pg.pct === 100 && r.pg.total).length;
