@@ -18,12 +18,12 @@ create table if not exists lesson_progress(
   student_id uuid references profiles(id) on delete cascade, lesson_id uuid references lessons(id) on delete cascade,
   done boolean default true, primary key(student_id, lesson_id));
 
-create or replace function is_admin() returns boolean language sql security definer stable as
+create or replace function is_admin() returns boolean language sql security definer stable set search_path = public as
 $$ select exists(select 1 from profiles where id=auth.uid() and role='admin') $$;
-create or replace function is_teacher() returns boolean language sql security definer stable as
+create or replace function is_teacher() returns boolean language sql security definer stable set search_path = public as
 $$ select exists(select 1 from profiles where id=auth.uid() and role in ('teacher','admin')) $$;
 
-create or replace function handle_new_user() returns trigger language plpgsql security definer as $$
+create or replace function handle_new_user() returns trigger language plpgsql security definer set search_path = public as $$
 begin
   insert into profiles(id, full_name, role) values (new.id, coalesce(new.raw_user_meta_data->>'full_name',''),
     case when new.raw_user_meta_data->>'role'='teacher' then 'teacher' else 'student' end);
@@ -35,6 +35,10 @@ create trigger on_auth_user_created after insert on auth.users for each row exec
 alter table profiles enable row level security; alter table categories enable row level security;
 alter table courses enable row level security; alter table lessons enable row level security;
 alter table enrollments enable row level security; alter table lesson_progress enable row level security;
+
+do $$ declare r record; begin
+ for r in select policyname, tablename from pg_policies where schemaname='public' loop
+  execute format('drop policy %I on public.%I', r.policyname, r.tablename); end loop; end $$;
 
 create policy p_read on profiles for select using (true);
 create policy p_upd on profiles for update using (id=auth.uid() or is_admin())
@@ -62,6 +66,13 @@ create policy lp_read on lesson_progress for select using (student_id=auth.uid()
 create policy lp_ins on lesson_progress for insert with check (student_id=auth.uid());
 create policy lp_del on lesson_progress for delete using (student_id=auth.uid());
 
-insert into categories(name, icon) values ('تطوير المهارات','🚀'),('ريادة الأعمال','💼'),('التعليم المدرسي','🎓'),('اللغات','🌍'),('التصميم','🎨'),('البرمجة','💻')
-on conflict do nothing;
+insert into categories(name, icon) select * from (values ('تطوير المهارات','🚀'),('ريادة الأعمال','💼'),('التعليم المدرسي','🎓'),('اللغات','🌍'),('التصميم','🎨'),('البرمجة','💻')) v(name,icon) where not exists (select 1 from categories);
 -- بعد التسجيل، اجعل حسابك أدمن:  update profiles set role='admin' where id=(select id from auth.users where email='EMAIL');
+
+grant usage on schema public to anon, authenticated;
+grant select on all tables in schema public to anon, authenticated;
+grant insert, update, delete on all tables in schema public to authenticated;
+grant usage, select on all sequences in schema public to authenticated;
+grant execute on all functions in schema public to anon, authenticated;
+alter default privileges in schema public grant select on tables to anon, authenticated;
+alter default privileges in schema public grant insert, update, delete on tables to authenticated;

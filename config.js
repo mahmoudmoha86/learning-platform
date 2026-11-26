@@ -1,1 +1,1 @@
-window.CFG = { SUPABASE_URL: "__SUPABASE_URL__", SUPABASE_ANON_KEY: "__SUPABASE_ANON_KEY__", SITE_NAME: "منصة تعلّم" };
+window.CFG = { SUPABASE_URL: "https://zdurruecehpyznkpoibl.supabase.co", SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkdXJydWVjZWhweXpua3BvaWJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU2NTQwMzcsImV4cCI6MjExMTIzMDAzN30.Kcg8SOxRja7E4rHCaBXh2rSvVong8RkKvPWnl6GxpEo", SITE_NAME: "منصة تعلّم" };
