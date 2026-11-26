@@ -1,3 +1,4 @@
+window.addEventListener('error', e => { const m = document.querySelector('#app'); if (m && m.innerText.includes('جاري التحميل')) m.innerHTML = '<p style="text-align:center;margin-top:60px">حصل خطأ في التحميل، حدّث الصفحة. (' + (e.message || '') + ')</p>'; });
 const sb = supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
 const $ = s => document.querySelector(s), app = $('#app');
 let me = null, cats = [];
@@ -185,4 +186,4 @@ async function route() {
   } catch (e) { app.innerHTML = '<p>حصل خطأ، حدّث الصفحة.</p>'; console.error(e); }
 }
 addEventListener('hashchange', route);
-loadMe().then(route);
+loadMe().catch(e => { console.error(e); header(); }).then(route);
