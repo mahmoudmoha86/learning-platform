@@ -33,18 +33,32 @@ function header() {
   quick();
   const o = $('#out'); if (o) o.onclick = async () => { await sb.auth.signOut(); location.hash = '#/'; await loadMe(); route(); };
 }
+const IC = {
+  grid: '<rect x="3" y="3" width="7" height="8" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="15" width="7" height="6" rx="2"/>',
+  bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/>',
+  case: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
+  book: '<path d="M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9 3v7l2-1.5 2 1.5V3"/>',
+  books: '<path d="M4 20V6a2 2 0 0 1 2-2h3v16H6a2 2 0 0 1-2-2zM9 4h4v16H9zM13 6l4-1 3 14-4 1z"/>',
+  star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+  chart: '<path d="M4 20h16M6 20v-6M11 20V9M16 20v-9M20 20V5"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2.2.6 3.5 2.6 3.5 5.5"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>',
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/>'
+};
 function quick() {
   let el = document.getElementById('qa'); if (!el) { el = document.createElement('div'); el.id = 'qa'; document.body.appendChild(el); }
-  const tr = (S.tracks || []).slice(0, 3);
-  const L = (h, i, t) => `<a href="${h}">${i} <span>${t}</span></a>`;
-  el.innerHTML = `<button class="qfab" id="qfab" aria-label="وصول سريع">☰<small>وصول سريع</small></button><div class="qov" id="qov"></div>
-  <aside class="qpn" id="qpn"><div class="qh"><b>🎓 ${esc(S.name || 'منصة تعلّم')}</b><button id="qx" aria-label="إغلاق">✕</button></div>
-  ${me ? `<div class="qg"><b>▦ لوحتي التعليمية</b>${L('#/dashboard', '📘', 'الدورات الحالية')}${L('#/dashboard', '✅', 'الدورات المنتهية')}${L('#/dashboard', '📊', 'أدائي')}${L('#/dashboard', '🏅', 'شهاداتي')}</div>` : `<div class="qg">${L('#/login', '🔑', 'تسجيل الدخول')}${L('#/register', '📝', 'إنشاء حساب')}</div>`}
-  ${tr.map(t => L('#/courses', esc(t.emoji || '📘'), esc(t.title))).join('')}
-  ${L('#/courses', '📚', 'تصفح جميع الدورات')}${me ? L('#/dashboard', '✨', 'المقترح لي') : ''}${L('#/instructors', '👨‍🏫', 'المدرسون')}${L('#/faq', '❓', 'الأسئلة الشائعة')}${L('#/contact', '✉️', 'اتصل بنا')}${me ? L('#/profile', '👤', 'حسابي') : ''}${me && me.role === 'admin' ? L('admin.html', '⚙️', 'لوحة الإدارة') : ''}</aside>`;
-  const open = v => { $('#qpn').classList.toggle('open', v); $('#qov').classList.toggle('open', v); };
-  $('#qfab').onclick = () => open(true); $('#qx').onclick = () => open(false); $('#qov').onclick = () => open(false);
-  $$('#qpn a').forEach(a => a.onclick = () => open(false));
+  const tr = (S.tracks || []).slice(0, 3), tic = ['bulb', 'case', 'book'];
+  const L = (h, i, t) => `<a href="${h}" title="${t}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${IC[i]}</svg><span>${t}</span></a>`;
+  el.innerHTML = `<nav class="rail" id="rail"><a class="rlogo" href="#/"><span class="lg">🎓</span><span>${esc(S.name || 'منصة تعلّم')}</span></a>
+  ${me ? L('#/dashboard', 'grid', 'لوحتي التعليمية') : L('#/login', 'key', 'تسجيل الدخول') + L('#/register', 'pen', 'إنشاء حساب')}
+  ${tr.map((t, i) => L('#/courses', tic[i] || 'book', esc(t.title))).join('')}
+  ${L('#/courses', 'books', 'تصفح جميع الدورات')}${me ? L('#/dashboard', 'star', 'المقترح لي') + L('#/dashboard', 'chart', 'أدائي وشهاداتي') : ''}${L('#/instructors', 'users', 'المدرسون')}${L('#/faq', 'help', 'الأسئلة الشائعة')}${L('#/contact', 'mail', 'اتصل بنا')}${me ? L('#/profile', 'user', 'حسابي') : ''}${me && me.role === 'admin' ? L('admin.html', 'gear', 'لوحة الإدارة') : ''}</nav>`;
+  document.body.classList.add('hasrail'); const r = $('#rail');
+  r.onclick = e => { if (!e.target.closest('a')) r.classList.toggle('x'); else r.classList.remove('x'); };
 }
 function footer() {
   const c = S.contact || {}, so = S.social || {};

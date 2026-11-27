@@ -95,11 +95,12 @@ header{box-shadow:0 2px 8px rgba(11,31,77,.08);padding:12px 5%;gap:14px;flex-wra
 @media(max-width:820px){.dl{grid-template-columns:1fr}.sb{position:static}}
 .tag{background:#e0eaff}footer{background:#0b1f4d}
 body,button,input,select,textarea{font-family:"Cairo","Segoe UI",Tahoma,Arial,sans-serif}
-/* quick access */
-.qfab{position:fixed;left:0;top:45%;z-index:30;background:var(--nv);color:#fff;border:0;border-radius:0 12px 12px 0;padding:10px 8px;cursor:pointer;font:inherit;font-size:1.2rem;box-shadow:0 4px 14px rgba(11,31,77,.3);display:flex;flex-direction:column;align-items:center;gap:4px}.qfab small{font-size:.65rem;writing-mode:vertical-rl;font-weight:700}
-.qov{display:none;position:fixed;inset:0;background:rgba(11,31,77,.45);z-index:40}.qov.open{display:block}
-.qpn{position:fixed;top:0;right:0;bottom:0;width:290px;max-width:85vw;background:#fff;z-index:41;transform:translateX(105%);transition:.25s;padding:18px;overflow:auto;box-shadow:-8px 0 30px rgba(11,31,77,.2);border-radius:20px 0 0 20px}.qpn.open{transform:none}
-.qh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;color:var(--p2);font-size:1.15rem}.qh button{background:none;border:0;font-size:1.2rem;cursor:pointer}
-.qpn a{display:flex;gap:10px;align-items:center;padding:11px 8px;color:var(--t);font-weight:600;border-bottom:1px solid var(--b)}.qpn a:hover{background:#eaf1ff;border-radius:8px}
-.qg{margin-bottom:6px}.qg>b{display:block;margin:4px 0}.qg a{font-weight:500;color:var(--m);padding:7px 8px 7px 8px;margin-right:18px}
-@media print{#qa{display:none}}
+/* quick access rail */
+.rail{position:fixed;top:0;right:0;bottom:0;width:72px;background:#fff;z-index:40;overflow:hidden;transition:width .22s,box-shadow .22s;border-radius:28px 0 0 0;box-shadow:-2px 0 10px rgba(11,31,77,.08);padding:14px 10px;display:flex;flex-direction:column}
+.rail:hover,.rail.x{width:260px;box-shadow:-10px 0 30px rgba(11,31,77,.2)}
+.rail a{display:flex;align-items:center;gap:14px;padding:15px 12px;color:#475569;font-weight:600;border-bottom:1px solid var(--b);white-space:nowrap;border-radius:0}
+.rail a svg{width:26px;height:26px;flex:none}.rail a span{opacity:0;transition:opacity .15s}.rail:hover a span,.rail.x a span{opacity:1}
+.rail a:hover{color:var(--p2);background:#eaf1ff}
+.rail .rlogo{border:0;color:var(--p2);font-weight:800;font-size:1.1rem;margin-bottom:6px}.rail .rlogo .lg{flex:none}
+body.hasrail{padding-right:72px}
+@media print{#qa{display:none}body.hasrail{padding:0}}
