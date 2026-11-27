@@ -24,7 +24,7 @@ function header() {
   const logo = S.logo_url ? `<img src="${esc(S.logo_url)}" alt="" style="height:38px">` : `<span class="lg">🎓</span> ${esc(S.name || 'منصة تعلّم')}`;
   $('#top').innerHTML = S.announcement ? `<div class="ann">${esc(S.announcement)}</div>` : '';
   $('#hdr').innerHTML = `<a class="logo" href="#/">${logo}</a>
-  <div class="dd"><button class="ddb" id="ddb">تصفح الدورات <i>⌄</i></button><div class="ddm" id="ddm">${cats.map(c => `<a href="#/courses?cat=${c.id}">${c.icon || '📘'} ${esc(c.name)}</a>`).join('')}<hr><a href="#/courses">كل الكورسات</a><a href="#/instructors">المدرسون</a><a href="#/about">عن المنصة</a><a href="#/contact">اتصل بنا</a>${me && me.role === 'admin' ? '<a href="admin.html">لوحة الإدارة</a>' : ''}</div></div>
+  <div class="dd"><button class="ddb" id="ddb">تصفح الدورات <i>⌄</i></button><div class="ddm" id="ddm">${cats.map(c => `<a href="#/courses?cat=${c.id}">${c.icon || '📘'} ${esc(c.name)}</a>`).join('')}<hr><a href="#/courses">كل الكورسات</a><a href="#/instructors">المدرسون</a><a href="#/about">عن المنصة</a><a href="#/contact">اتصل بنا</a>${me && (me.role === 'admin' || me.role === 'supervisor') ? '<a href="admin.html">لوحة الإدارة</a>' : ''}</div></div>
   <form class="hs2" id="hs2"><button aria-label="بحث">🔍</button><input id="hq2" placeholder="ابحث عن دورات"></form>
   <div class="auth">${me ? `<a href="#/dashboard" class="btn s o">لوحتي</a><a href="#/profile" class="who">${avatar(me, 34)}</a><button class="btn g s" id="out">خروج</button>` : '<a class="btn g" href="#/login">تسجيل الدخول</a><a class="btn" href="#/register">إنشاء حساب</a>'}</div>`;
   $('#ddb').onclick = e => { e.stopPropagation(); $('#ddm').classList.toggle('open'); };
@@ -56,7 +56,7 @@ function quick() {
   el.innerHTML = `<nav class="rail" id="rail"><a class="rlogo" href="#/"><span class="lg">🎓</span><span>${esc(S.name || 'منصة تعلّم')}</span></a>
   ${me ? L('#/dashboard', 'grid', 'لوحتي التعليمية') : L('#/login', 'key', 'تسجيل الدخول') + L('#/register', 'pen', 'إنشاء حساب')}
   ${tr.map((t, i) => L('#/courses', tic[i] || 'book', esc(t.title))).join('')}
-  ${L('#/courses', 'books', 'تصفح جميع الدورات')}${me ? L('#/dashboard', 'star', 'المقترح لي') + L('#/dashboard', 'chart', 'أدائي وشهاداتي') : ''}${L('#/instructors', 'users', 'المدرسون')}${L('#/faq', 'help', 'الأسئلة الشائعة')}${L('#/contact', 'mail', 'اتصل بنا')}${me ? L('#/profile', 'user', 'حسابي') : ''}${me && me.role === 'admin' ? L('admin.html', 'gear', 'لوحة الإدارة') : ''}</nav>`;
+  ${L('#/courses', 'books', 'تصفح جميع الدورات')}${me ? L('#/dashboard', 'star', 'المقترح لي') + L('#/dashboard', 'chart', 'أدائي وشهاداتي') : ''}${L('#/instructors', 'users', 'المدرسون')}${L('#/faq', 'help', 'الأسئلة الشائعة')}${L('#/contact', 'mail', 'اتصل بنا')}${me ? L('#/profile', 'user', 'حسابي') : ''}${me && (me.role === 'admin' || me.role === 'supervisor') ? L('admin.html', 'gear', 'لوحة الإدارة') : ''}</nav>`;
   document.body.classList.add('hasrail'); const r = $('#rail');
   const mark = () => { const h = location.hash || '#/'; let hit = null; $$('#rail a:not(.rlogo)').forEach(a => { a.classList.remove('act'); if (!hit && a.getAttribute('href') === h) hit = a; }); if (!hit && (h === '#/' || h === '')) hit = $('#rail a:not(.rlogo)'); if (hit) hit.classList.add('act'); };
   mark(); window.removeEventListener('hashchange', window.__rm || (() => {})); window.__rm = mark; window.addEventListener('hashchange', mark);
@@ -84,7 +84,7 @@ async function home() {
   const cnt = async (t, f) => { let q = sb.from(t).select('*', { count: 'exact', head: true }); if (f) q = q.eq(...f); return (await q).count || 0; };
   const [feat, instr, tes, par, faq, nc, ns, nt, ne] = await Promise.all([
     sb.from('courses').select(CSEL).eq('status', 'published').order('featured', { ascending: false }).order('created_at', { ascending: false }).limit(6),
-    sb.from('profiles').select('*').eq('role', 'teacher').limit(4),
+    sb.from('profiles').select(PCOLS).eq('role', 'teacher').eq('suspended', false).limit(4),
     sb.from('testimonials').select('*').order('position'), sb.from('partners').select('*').order('position'), sb.from('faqs').select('*').order('position').limit(5),
     cnt('courses', ['status', 'published']), cnt('profiles', ['role', 'student']), cnt('profiles', ['role', 'teacher']), cnt('enrollments')]);
   const trk = (S.tracks || []).slice(0, 3);
@@ -303,7 +303,7 @@ async function teacherDash(tid) {
   const { data: ul } = ids.length ? await sb.from('lessons').select('course_id').eq('approved', false).in('course_id', ids) : { data: [] };
   const { data: uq } = ids.length ? await sb.from('quiz_questions').select('course_id').eq('approved', false).in('course_id', ids) : { data: [] };
   const up = {}; [...(ul || []), ...(uq || [])].forEach(x => up[x.course_id] = (up[x.course_id] || 0) + 1);
-  app.innerHTML = `${tid ? '<div class="box" style="background:#fff4e5">👁️ أنت تشاهد صفحة المدرس كأدمن ويمكنك التعديل فيها. <a href="admin.html#teachers">رجوع لقائمة المدرسين</a></div>' : ''}<div class="row"><h1 style="flex:1">${tid ? 'صفحة المدرس: ' + esc(tp?.full_name) : 'لوحة المدرس'}</h1>${me.role === 'admin' ? '<a class="btn o" href="admin.html">لوحة الإدارة</a>' : ''}<button class="btn y" id="new">+ كورس جديد</button></div>
+  app.innerHTML = `${tid ? '<div class="box" style="background:#fff4e5">👁️ أنت تشاهد صفحة المدرس كأدمن ويمكنك التعديل فيها. <a href="admin.html#teachers">رجوع لقائمة المدرسين</a></div>' : ''}<div class="row"><h1 style="flex:1">${tid ? 'صفحة المدرس: ' + esc(tp?.full_name) : 'لوحة المدرس'}</h1>${me.role === 'admin' || me.role === 'supervisor' ? '<a class="btn o" href="admin.html">لوحة الإدارة</a>' : ''}<button class="btn y" id="new">+ كورس جديد</button></div>
   <div class="stats"><div class="stat"><b>${(data || []).length}</b>الكورسات</div><div class="stat"><b>${(en || []).length}</b>إجمالي المسجلين</div><div class="stat"><b>${(data || []).filter(c => c.status === 'published').length}</b>منشور</div></div>
   <div class="tw"><table><tr><th>الكورس</th><th>الحالة</th><th>الطلاب</th><th>بانتظار الموافقة</th><th></th></tr>${(data || []).map(c => `<tr><td>${esc(c.title)}</td><td>${stAr[c.status]}</td><td>${n[c.id] || 0}</td><td>${up[c.id] ? '⏳ ' + up[c.id] + ' عنصر' : '-'}</td><td><a class="btn s" href="#/edit/${c.id}">تعديل</a></td></tr>`).join('')}</table></div>`;
   $('#new').onclick = async () => { const { data: c, error } = await sb.from('courses').insert({ title: 'كورس جديد', teacher_id: tid || me.id }).select().single(); if (error) toast(error.message); else location.hash = `#/edit/${c.id}`; };
@@ -344,11 +344,11 @@ async function edit(id) {
   $('#aq').onclick = async () => { const o = [0, 1, 2, 3].map(i => $('#o' + i).value.trim()).filter(Boolean); if (!$('#qt').value || o.length < 2) return toast('اكتب السؤال واختيارين على الأقل'); const a = +$('#qa').value; if (a >= o.length) return toast('رقم الإجابة غير صحيح'); const { error } = await sb.from('quiz_questions').insert({ course_id: id, question: $('#qt').value, options: o, answer: a, position: (qs || []).length + 1 }); error ? toast(error.message) : edit(id); };
 }
 async function instructors() {
-  const { data } = await sb.from('profiles').select('*').eq('role', 'teacher');
+  const { data } = await sb.from('profiles').select(PCOLS).eq('role', 'teacher').eq('suspended', false);
   app.innerHTML = `<h1>المدرسون</h1><div class="grid">${(data || []).map(t => `<a class="card" href="#/instructor/${t.id}"><div class="bd" style="align-items:center;text-align:center">${avatar(t, 80)}<b>${esc(t.full_name)}</b><span class="muted">${esc(t.title || 'مدرس')}</span><p class="muted">${esc((t.bio || '').slice(0, 90))}</p></div></a>`).join('') || '<p class="muted">لا يوجد مدرسون بعد.</p>'}</div>`;
 }
 async function instructor(id) {
-  const { data: t } = await sb.from('profiles').select('*').eq('id', id).single();
+  const { data: t } = await sb.from('profiles').select(PCOLS).eq('id', id).single();
   const { data: cs } = await sb.from('courses').select(CSEL).eq('teacher_id', id).eq('status', 'published');
   if (!t) { app.innerHTML = '<p>غير موجود</p>'; return; }
   app.innerHTML = `<div class="box row">${avatar(t, 96)}<div><h1 style="margin:0">${esc(t.full_name)}</h1><div class="muted">${esc(t.title || 'مدرس')}</div><p>${esc(t.bio)}</p></div></div><h2 class="sec">كورسات المدرس</h2><div class="grid">${(cs || []).map(c => courseCard(c)).join('') || '<p class="muted">لا كورسات منشورة بعد.</p>'}</div>`;
@@ -400,4 +400,4 @@ async function route() {
   } catch (e) { app.innerHTML = '<p>حصل خطأ، حدّث الصفحة.</p>'; console.error(e); }
 }
 addEventListener('hashchange', route);
-(async () => { try { await loadSettings(); await loadMe(); } catch (e) { console.error(e); } footer(); header(); route(); })();
+(async () => { try { await loadSettings(); await loadMe(); if (me && me.suspended) { await sb.auth.signOut(); me = null; toast('هذا الحساب موقوف، تواصل مع الإدارة'); } } catch (e) { console.error(e); } footer(); header(); route(); })();
