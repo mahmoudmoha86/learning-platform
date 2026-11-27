@@ -406,8 +406,8 @@ async function faqPage() {
 }
 
 const MENUS = {
-  student: [['#/dashboard', '🏠', 'الرئيسية'], ['#/courses', '📚', 'تصفح الكورسات'], ['#/s/courses', '🎓', 'كورساتي'], ['#/s/lectures', '🎬', 'المحاضرات'], ['#/s/exams', '📝', 'الامتحانات المتاحة'], ['#/s/myexams', '✅', 'امتحاناتي'], ['#/s/results', '📊', 'نتائجي ودرجاتي'], ['#/s/progress', '📈', 'تقدمي الدراسي'], ['#/s/certs', '🏅', 'شهاداتي'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']],
-  teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/exams', '📝', 'الامتحانات'], ['#/t/qbank', '🏦', 'بنك الأسئلة'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
+  student: [['#/dashboard', '🏠', 'الرئيسية'], ['#/courses', '📚', 'تصفح الكورسات'], ['#/s/courses', '🎓', 'كورساتي'], ['#/s/lectures', '🎬', 'المحاضرات'], ['#/s/exams', '📝', 'الامتحانات المتاحة'], ['#/s/myexams', '✅', 'امتحاناتي'], ['#/s/homework', '📚', 'الواجبات'], ['#/s/results', '📊', 'نتائجي ودرجاتي'], ['#/s/progress', '📈', 'تقدمي الدراسي'], ['#/s/certs', '🏅', 'شهاداتي'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']],
+  teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/exams', '📝', 'الامتحانات'], ['#/t/qbank', '🏦', 'بنك الأسئلة'], ['#/t/homework', '📚', 'الواجبات'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
 };
 function roleMenu(active) {
   applyRoleRail(active);
@@ -475,9 +475,10 @@ async function stuData() {
 }
 async function sPage(kind) {
   if (needLogin()) return; if (me.role !== 'student') return denyPage();
+  if (kind === 'homework') { shellPage('#/s/homework', '<div id="hwr"></div>'); return hwStudent($('#hwr')); }
   const { rows, at } = await stuData(); const tt = Object.fromEntries(rows.map(r => [r.c.id, r.c.title]));
   const tbl = (h, b) => `<div class="tw"><table><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>${b || `<tr><td colspan="${h.length}" class="muted" style="text-align:center">لا توجد بيانات</td></tr>`}</table></div>`;
-  const hrefs = { courses: '#/s/courses', lectures: '#/s/lectures', exams: '#/s/exams', myexams: '#/s/myexams', results: '#/s/results', progress: '#/s/progress', certs: '#/s/certs' };
+  const hrefs = { courses: '#/s/courses', lectures: '#/s/lectures', exams: '#/s/exams', myexams: '#/s/myexams', homework: '#/s/homework', results: '#/s/results', progress: '#/s/progress', certs: '#/s/certs' };
   let html = '';
   if (kind === 'courses') html = `<h1>كورساتي</h1>${rows.length ? `<div class="grid">${rows.map(({ c, pg }) => courseCard(c, `<div class="bar"><i style="width:${pg.pct}%"></i></div><span class="muted">${pg.pct}%</span>`, `#/learn/${c.id}`).replace('التفاصيل', 'تابع')).join('')}</div>` : '<p class="muted">لم تسجّل في أي كورس بعد.</p><a class="btn" href="#/courses">تصفح الكورسات</a>'}`;
   if (kind === 'lectures') { const out = []; for (const r of rows) { const { data: ls } = await sb.from('lessons').select('id,title,position').eq('course_id', r.c.id).order('position'); out.push(`<div class="box"><h3>${esc(r.c.title)}</h3>${(ls || []).map((l, i) => `<div class="ls"><span style="flex:1">${r.pg.set.has(l.id) ? '✅' : '⭕'} ${i + 1}. ${esc(l.title)}</span><a class="btn s o" href="#/learn/${r.c.id}/${l.id}">مشاهدة</a></div>`).join('') || '<p class="muted">لا محاضرات بعد</p>'}</div>`); } html = `<h1>المحاضرات</h1>${out.join('') || '<p class="muted">سجّل في كورس لتظهر محاضراته هنا.</p>'}`; }
@@ -510,6 +511,7 @@ async function tPage(kind) {
   if (kind === 'lectures') html = `<h1>إدارة المحاضرات</h1><p class="muted">من هنا تدير محاضرات كل كورساتك. الرفع (فيديو، صورة، ملف) يتم من صفحة تعديل الكورس.</p>${tbl(['المحاضرة', 'الكورس', 'المحتوى', 'الحالة', ''], d.ls.map(l => `<tr><td>${esc(l.title)}</td><td>${esc(d.title[l.course_id])}</td><td>${l.video_url ? '🎬 ' : ''}${l.image_url ? '🖼️ ' : ''}${l.file_url ? '📎' : ''}</td><td>${l.approved ? 'معتمد' : '⏳ بانتظار الموافقة'}</td><td><a class="btn s" href="#/edit/${l.course_id}">تعديل</a></td></tr>`).join(''))}`;
   if (kind === 'students') { const by = {}; d.en.forEach(e => (by[e.student_id] = by[e.student_id] || []).push(e.course_id)); html = `<h1>إدارة الطلاب</h1>${tbl(['الطالب', 'الكورسات', 'متوسط التقدم'], Object.entries(by).map(([sid, cl]) => `<tr><td>${esc(d.name[sid] || '')}</td><td>${cl.map(c => esc(d.title[c])).join('، ')}</td><td>${Math.round(cl.reduce((s, c) => s + d.pct(sid, c), 0) / cl.length)}%</td></tr>`).join(''))}`; }
   if (kind === 'progress') html = `<h1>متابعة تقدم الطلاب</h1>${tbl(['الطالب', 'الكورس', 'التقدم'], d.en.map(e => { const p = d.pct(e.student_id, e.course_id); return `<tr><td>${esc(d.name[e.student_id] || '')}</td><td>${esc(d.title[e.course_id])}</td><td>${pctCls(p)} ${p}%</td></tr>`; }).join(''))}`;
+  if (kind === 'homework') { shellPage('#/t/homework', '<div id="hwr"></div>'); return hwStaff($('#hwr')); }
   if (kind === 'exams' || kind === 'qbank' || kind === 'results') { shellPage('#/t/' + kind, '<div id="exr"></div>'); return examsStaff($('#exr'), kind, ['exams', 'qbank', 'results']); }
   if (kind === 'results_old') html = `<h1>نتائج الطلاب</h1>${tbl(['الطالب', 'الكورس', 'الدرجة', 'النسبة', 'التاريخ'], d.at.map(a => { const p = a.total ? Math.round(a.score / a.total * 100) : 0; return `<tr><td>${esc(d.name[a.student_id] || '')}</td><td>${esc(d.title[a.course_id])}</td><td>${a.score}/${a.total}</td><td>${p}%</td><td>${fmtDate(a.created_at)}</td></tr>`; }).join(''))}`;
   if (!html) return teacherDash();

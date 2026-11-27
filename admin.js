@@ -1,5 +1,5 @@
 const root = $('#root'); let me = null, cur = 'overview';
-const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
+const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
 const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, p, v) => { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k] = a[k] || {}); a[ks.at(-1)] = v; };
 async function saveS() { const { error } = await sb.from('site_settings').upsert({ key: 'site', value: S }); toast(error ? 'فشل الحفظ: ' + error.message : 'تم الحفظ ✓'); if (!error) loadSettingsTheme(); }
@@ -42,7 +42,7 @@ function tableEditor(table, title, fields, order = 'position') { // fields: [key
 }
 const fmtDT = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 const PERMS = [['users', 'إدارة الطلاب والمدرسين'], ['courses', 'إدارة الكورسات والمحتوى'], ['exams', 'إدارة الامتحانات'], ['support', 'الدعم الفني والرسائل'], ['website', 'إدارة الموقع'], ['logs', 'سجل النشاطات'], ['finance', 'الحسابات المالية'], ['reports', 'التقارير']];
-const PERM_OF = { exams: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', sep: null };
+const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', sep: null };
 const can = k => !me ? false : me.role === 'admin' || (me.role === 'supervisor' && (PERM_OF[k] === null || (PERM_OF[k] !== 'ADMIN' && me.permissions && me.permissions[PERM_OF[k]])));
 function modal(html, onReady) {
   const o = document.createElement('div'); o.className = 'mdl'; o.innerHTML = `<div class="mdb"><button class="mdx" aria-label="إغلاق">✕</button>${html}</div>`; document.body.append(o);
@@ -213,6 +213,7 @@ const pages = {
     $('#nw').onclick = async () => { const { data: c, error } = await sb.from('courses').insert({ title: 'كورس جديد', teacher_id: me.id, instructor_name: me.full_name }).select().single(); if (error) toast(error.message); else location.href = `index.html#/edit/${c.id}`; };
   },
   async exams() { root.querySelector('#pg').innerHTML = '<h1>الامتحانات وبنك الأسئلة</h1><div id="exr"></div>'; await examsStaff($('#exr')); },
+  async homework() { root.querySelector('#pg').innerHTML = '<div id="hwr"></div>'; await hwStaff($('#hwr')); },
   async academic() {
     const [a1, a2, a3] = await Promise.all([sb.from('stages').select('*').order('position'), sb.from('grades').select('*').order('position'), sb.from('subjects').select('*').order('position')]);
     const st = a1.data || [], gr = a2.data || [], su = a3.data || [];
