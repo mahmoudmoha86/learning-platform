@@ -157,7 +157,7 @@ const pages = {
   landing() { return lpPage(); },
   partners() { tableEditor('partners', 'الشركاء', [['name', 'الاسم'], ['logo_url', 'الشعار', 'img'], ['position', 'الترتيب', 'num']]); },
   about() { settingsPage('عن المنصة', [['about_title', 'العنوان'], ['about_text', 'النص', 'area'], ['about_image', 'الصورة', 'img'], ['vision', 'الرؤية', 'area'], ['mission', 'الرسالة', 'area']]); },
-  contactset() { settingsPage('التواصل والسوشيال', [['contact.email', 'البريد الإلكتروني'], ['contact.phone', 'الهاتف'], ['contact.whatsapp', 'واتساب (رقم بكود الدولة)'], ['contact.address', 'العنوان'], ['contact.hours', 'مواعيد العمل'], ['social.facebook', 'رابط فيسبوك'], ['social.youtube', 'رابط يوتيوب'], ['social.instagram', 'رابط إنستجرام'], ['social.twitter', 'رابط تويتر/X'], ['social.linkedin', 'رابط لينكدإن']]); },
+  contactset() { settingsPage('التواصل والسوشيال', [['contact.email', 'البريد الإلكتروني'], ['contact.phone', 'الهاتف'], ['contact.whatsapp', 'واتساب (رقم بكود الدولة)'], ['contact.telegram', 'تيليجرام (اسم المستخدم أو الرابط)'], ['contact.address', 'العنوان'], ['contact.hours', 'مواعيد العمل'], ['social.facebook', 'رابط فيسبوك'], ['social.youtube', 'رابط يوتيوب'], ['social.instagram', 'رابط إنستجرام'], ['social.twitter', 'رابط تويتر/X'], ['social.linkedin', 'رابط لينكدإن']]); },
   legal() { settingsPage('الشروط والخصوصية', [['terms', 'الشروط والأحكام', 'area'], ['privacy', 'سياسة الخصوصية', 'area']]); },
   async review() {
     const [{ data: pc }, { data: pl }, { data: pq }] = await Promise.all([
