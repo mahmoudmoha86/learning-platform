@@ -1,6 +1,7 @@
 window.addEventListener('error', e => { const m = $('#app'); if (m && m.innerText.includes('جاري التحميل')) m.innerHTML = '<p style="text-align:center;margin-top:60px">حصل خطأ في التحميل، حدّث الصفحة. (' + esc(e.message || '') + ')</p>'; });
 const app = $('#app');
-let me = null, cats = [];
+let me = null, cats = [], stages = [], grades = [], subjects = [];
+const gradeName = id => (grades.find(g => g.id == id) || {}).name || '', subjName = id => (subjects.find(g => g.id == id) || {}).name || '';
 const catName = id => (cats.find(c => c.id == id) || {}).name || 'عام';
 const catIcon = id => (cats.find(c => c.id == id) || {}).icon || '📘';
 const needLogin = () => { if (!me) { location.hash = '#/login'; return true; } };
@@ -18,6 +19,7 @@ function coverHtml(c) {
 async function loadMe() {
   me = await getMe();
   const { data: c } = await sb.from('categories').select('*').order('id'); cats = c || [];
+  const [a1, a2, a3] = await Promise.all([sb.from('stages').select('*').order('position'), sb.from('grades').select('*').order('position'), sb.from('subjects').select('*').order('position')]); stages = a1.data || []; grades = a2.data || []; subjects = a3.data || [];
   header();
 }
 function header() {
@@ -68,7 +70,7 @@ function footer() {
 function courseCard(c, extra = '', link = null) {
   const rv = c.reviews || [], r = avg(rv);
   return `<div class="card">${coverHtml(c)}<div class="bd"><div class="row" style="justify-content:space-between"><span class="tag">${esc(catName(c.category_id))}</span><span class="tag y">${esc(c.level || '')}</span></div>
-  <h3>${esc(c.title)}</h3><div class="muted">${esc(c.profiles?.full_name || c.instructor_name || '')}${c.duration ? ' · ⏱ ' + esc(c.duration) : ''}</div>
+  <h3>${esc(c.title)}</h3><div class="muted">${esc(c.profiles?.full_name || c.instructor_name || '')}${c.duration ? ' · ⏱ ' + esc(c.duration) : ''}</div>${c.grade_id || c.subject_id ? `<div class="muted">${esc([gradeName(c.grade_id), subjName(c.subject_id)].filter(Boolean).join(' · '))}</div>` : ''}<div class="tag y" style="align-self:flex-start;margin-top:6px">${+c.price > 0 ? esc(c.price) + ' ج.م' : 'مجاني'}</div>
   ${rv.length ? `<div class="stars">${stars(r)} <span class="muted">(${rv.length})</span></div>` : ''}${extra}
   <div style="margin-top:auto"><a class="btn s" href="${link || '#/course/' + c.id}">التفاصيل</a></div></div></div>`;
 }
@@ -133,18 +135,22 @@ async function home(q) {
   const hx = $('#hx'); if (hx) { if (me) { $('#hn').value = me.full_name || ''; $('#he').value = me.email || ''; } hx.onclick = async () => { if (!$('#hn').value.trim() || !$('#hb').value.trim()) return toast('اكتب الاسم والرسالة'); hx.disabled = true; const { error } = await sb.from('messages').insert({ name: $('#hn').value, email: $('#he').value, subject: $('#hs').value, body: $('#hb').value }); hx.disabled = false; if (error) return toast('تعذر الإرسال، حاول مرة أخرى'); toast('تم إرسال رسالتك ✓'); ['hs', 'hb'].forEach(i => $('#' + i).value = ''); }; }
 }
 async function courses(q) {
-  const p = new URLSearchParams(q || ''); const cat = p.get('cat') || '', s = p.get('s') || '', lv = p.get('lv') || '', so = p.get('so') || 'new';
+  const p = new URLSearchParams(q || ''); const cat = p.get('cat') || '', s = p.get('s') || '', lv = p.get('lv') || '', so = p.get('so') || 'new', gr = p.get('gr') || '', sj = p.get('sj') || '', st = p.get('st') || '', pr = p.get('pr') || '';
   let r = sb.from('courses').select(CSEL).eq('status', 'published');
-  if (cat) r = r.eq('category_id', cat); if (lv) r = r.eq('level', lv); if (s) r = r.ilike('title', `%${s}%`);
+  if (cat) r = r.eq('category_id', cat); if (lv) r = r.eq('level', lv); if (s) r = r.ilike('title', `%${s}%`); if (gr) r = r.eq('grade_id', gr); else if (st) r = r.in('grade_id', grades.filter(g => g.stage_id == st).map(g => g.id).concat([0])); if (sj) r = r.eq('subject_id', sj); if (pr === 'free') r = r.or('price.is.null,price.eq.0'); if (pr === 'paid') r = r.gt('price', 0);
   r = so === 'az' ? r.order('title') : r.order('created_at', { ascending: false });
   const { data } = await r;
   app.innerHTML = `<h1>الكورسات</h1><div class="box row"><input id="s" placeholder="ابحث عن كورس" value="${esc(s)}" style="flex:2;margin:0;min-width:160px">
   <select id="cat" style="flex:1;margin:0"><option value="">كل التصنيفات</option>${cats.map(c => `<option value="${c.id}" ${c.id == cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+  <select id="st" style="flex:1;margin:0"><option value="">كل المراحل</option>${stages.map(x => `<option value="${x.id}" ${x.id == st ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+  <select id="gr" style="flex:1;margin:0"><option value="">كل الصفوف</option>${grades.filter(g => !st || g.stage_id == st).map(x => `<option value="${x.id}" ${x.id == gr ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+  <select id="sj" style="flex:1;margin:0"><option value="">كل المواد</option>${subjects.map(x => `<option value="${x.id}" ${x.id == sj ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+  <select id="pr" style="flex:1;margin:0"><option value="">مجاني ومدفوع</option><option value="free" ${pr === 'free' ? 'selected' : ''}>مجاني</option><option value="paid" ${pr === 'paid' ? 'selected' : ''}>مدفوع</option></select>
   <select id="lv" style="flex:1;margin:0"><option value="">كل المستويات</option>${['مبتدئ', 'متوسط', 'متقدم'].map(x => `<option ${x === lv ? 'selected' : ''}>${x}</option>`).join('')}</select>
   <select id="so" style="flex:1;margin:0"><option value="new">الأحدث</option><option value="az" ${so === 'az' ? 'selected' : ''}>أبجديًا</option></select>
   <button class="btn" id="go">بحث</button></div><p class="muted">${(data || []).length} كورس</p><div class="grid">${(data || []).map(c => courseCard(c)).join('') || '<p class="muted">لا نتائج.</p>'}</div>`;
-  const go = () => location.hash = `#/courses?cat=${$('#cat').value}&lv=${encodeURIComponent($('#lv').value)}&so=${$('#so').value}&s=${encodeURIComponent($('#s').value)}`;
-  $('#go').onclick = go; ['cat', 'lv', 'so'].forEach(i => $('#' + i).onchange = go); $('#s').onkeydown = e => { if (e.key === 'Enter') go(); };
+  const go = () => location.hash = `#/courses?cat=${$('#cat').value}&lv=${encodeURIComponent($('#lv').value)}&st=${$('#st').value}&gr=${$('#gr').value}&sj=${$('#sj').value}&pr=${$('#pr').value}&so=${$('#so').value}&s=${encodeURIComponent($('#s').value)}`;
+  $('#go').onclick = go; ['cat', 'lv', 'so', 'gr', 'sj', 'pr'].forEach(i => $('#' + i).onchange = go); $('#st').onchange = () => { $('#gr').value = ''; go(); }; $('#s').onkeydown = e => { if (e.key === 'Enter') go(); };
 }
 async function course(id) {
   const { data: c } = await sb.from('courses').select('*,profiles!teacher_id(id,full_name,bio,title,avatar_url)').eq('id', id).single();
@@ -156,7 +162,7 @@ async function course(id) {
   let enr = false, mine = null;
   if (me) { const { data } = await sb.from('enrollments').select('course_id').eq('student_id', me.id).eq('course_id', id); enr = !!(data && data.length); mine = (rv || []).find(x => x.student_id === me.id); }
   const r = avg(rv || []);
-  app.innerHTML = `<div class="chead">${coverHtml(c)}<div class="cinfo"><span class="tag">${esc(catName(c.category_id))}</span> <span class="tag y">${esc(c.level || '')}</span> ${c.status !== 'published' ? `<span class="tag">${stAr[c.status]}</span>` : ''}
+  app.innerHTML = `<div class="chead">${coverHtml(c)}<div class="cinfo"><span class="tag">${esc(catName(c.category_id))}</span> <span class="tag y">${esc(c.level || '')}</span> ${c.grade_id ? `<span class="tag">${esc(gradeName(c.grade_id))}</span> ` : ''}${c.subject_id ? `<span class="tag">${esc(subjName(c.subject_id))}</span> ` : ''}<span class="tag y">${+c.price > 0 ? esc(c.price) + ' ج.م' : 'مجاني'}</span> ${c.status !== 'published' ? `<span class="tag">${stAr[c.status]}</span>` : ''}
   <h1>${esc(c.title)}</h1><p>${esc(c.description)}</p>
   <div class="muted">${(rv || []).length ? `<span class="stars">${stars(r)}</span> ${r.toFixed(1)} (${rv.length} تقييم) · ` : ''}${(ls || []).length} درس${c.duration ? ' · ⏱ ' + esc(c.duration) : ''}</div>
   <p class="muted">المدرس: ${c.profiles ? `<a href="#/instructor/${c.profiles.id}">${esc(c.profiles.full_name)}</a>` : esc(c.instructor_name || 'فريق المنصة')}</p>
@@ -341,6 +347,9 @@ async function edit(id) {
   app.innerHTML = `<h1>تعديل الكورس</h1>${adm ? '' : '<div class="box" style="background:#fff4e5">أي درس أو فيديو أو صورة أو ملف أو سؤال تضيفه يظهر للطلاب بعد موافقة الأدمن فقط.</div>'}<div class="box"><label>العنوان</label><input id="t" value="${esc(c.title)}"><label>الوصف</label><textarea id="d" rows="4">${esc(c.description)}</textarea>
   <div class="two"><div><label>التصنيف</label><select id="ct">${cats.map(x => `<option value="${x.id}" ${x.id == c.category_id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
   <div><label>المستوى</label><select id="lv">${['مبتدئ', 'متوسط', 'متقدم'].map(x => `<option ${x === c.level ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+  <div><label>الصف</label><select id="gd"><option value="">بدون</option>${stages.map(st => `<optgroup label="${esc(st.name)}">${grades.filter(g => g.stage_id == st.id).map(g => `<option value="${g.id}" ${g.id == c.grade_id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</optgroup>`).join('')}</select></div>
+  <div><label>المادة</label><select id="sjt"><option value="">بدون</option>${subjects.map(x => `<option value="${x.id}" ${x.id == c.subject_id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+  ${adm || me.role === 'supervisor' ? `<div><label>السعر (ج.م، 0 = مجاني)</label><input id="pc" type="number" min="0" step="0.01" value="${+c.price || 0}"></div>` : ''}
   <div><label>المدة (مثال: 4 ساعات)</label><input id="du" value="${esc(c.duration)}"></div><div><label>إيموجي الغلاف</label><input id="em" value="${esc(c.emoji)}"></div></div>
   <label>ماذا سيتعلم الطالب؟ (سطر لكل نقطة)</label><textarea id="oc" rows="4">${esc(c.outcomes)}</textarea>
   <label>صورة الغلاف</label><div class="row">${c.cover_url ? `<img src="${esc(c.cover_url)}" style="height:60px;border-radius:8px">` : ''}<input type="file" id="cvf" accept="image/*" style="flex:1"><button class="btn o s" id="cvx">إزالة</button></div>
@@ -352,7 +361,7 @@ async function edit(id) {
   <h4>إضافة سؤال</h4><input id="qt" placeholder="نص السؤال"><input id="o0" placeholder="الاختيار 1"><input id="o1" placeholder="الاختيار 2"><input id="o2" placeholder="الاختيار 3 (اختياري)"><input id="o3" placeholder="الاختيار 4 (اختياري)">
   <label>رقم الإجابة الصحيحة</label><select id="qa"><option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option></select><button class="btn" id="aq">إضافة السؤال</button></div>`;
   const patch = async o => { const { error } = await sb.from('courses').update(o).eq('id', id); error ? toast(error.message) : toast('تم'); return !error; };
-  const vals = () => ({ title: $('#t').value, description: $('#d').value, category_id: +$('#ct').value, level: $('#lv').value, duration: $('#du').value || null, emoji: $('#em').value || null, outcomes: $('#oc').value || null });
+  const vals = () => ({ title: $('#t').value, description: $('#d').value, category_id: +$('#ct').value, level: $('#lv').value, duration: $('#du').value || null, emoji: $('#em').value || null, outcomes: $('#oc').value || null, grade_id: $('#gd').value ? +$('#gd').value : null, subject_id: $('#sjt').value ? +$('#sjt').value : null, ...($('#pc') ? { price: +$('#pc').value || 0 } : {}) });
   $('#sv').onclick = () => patch(vals());
   $('#cvf').onchange = async e => { const u = await uploadImage(e.target.files[0], 'covers'); if (u && await patch({ cover_url: u })) edit(id); };
   $('#cvx').onclick = async () => { if (await patch({ cover_url: null })) edit(id); };
