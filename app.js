@@ -30,7 +30,21 @@ function header() {
   $('#ddb').onclick = e => { e.stopPropagation(); $('#ddm').classList.toggle('open'); };
   document.onclick = () => { const m = $('#ddm'); if (m) m.classList.remove('open'); };
   $('#hs2').onsubmit = e => { e.preventDefault(); location.hash = `#/courses?s=${encodeURIComponent($('#hq2').value)}`; };
+  quick();
   const o = $('#out'); if (o) o.onclick = async () => { await sb.auth.signOut(); location.hash = '#/'; await loadMe(); route(); };
+}
+function quick() {
+  let el = document.getElementById('qa'); if (!el) { el = document.createElement('div'); el.id = 'qa'; document.body.appendChild(el); }
+  const tr = (S.tracks || []).slice(0, 3);
+  const L = (h, i, t) => `<a href="${h}">${i} <span>${t}</span></a>`;
+  el.innerHTML = `<button class="qfab" id="qfab" aria-label="وصول سريع">☰<small>وصول سريع</small></button><div class="qov" id="qov"></div>
+  <aside class="qpn" id="qpn"><div class="qh"><b>🎓 ${esc(S.name || 'منصة تعلّم')}</b><button id="qx" aria-label="إغلاق">✕</button></div>
+  ${me ? `<div class="qg"><b>▦ لوحتي التعليمية</b>${L('#/dashboard', '📘', 'الدورات الحالية')}${L('#/dashboard', '✅', 'الدورات المنتهية')}${L('#/dashboard', '📊', 'أدائي')}${L('#/dashboard', '🏅', 'شهاداتي')}</div>` : `<div class="qg">${L('#/login', '🔑', 'تسجيل الدخول')}${L('#/register', '📝', 'إنشاء حساب')}</div>`}
+  ${tr.map(t => L('#/courses', esc(t.emoji || '📘'), esc(t.title))).join('')}
+  ${L('#/courses', '📚', 'تصفح جميع الدورات')}${me ? L('#/dashboard', '✨', 'المقترح لي') : ''}${L('#/instructors', '👨‍🏫', 'المدرسون')}${L('#/faq', '❓', 'الأسئلة الشائعة')}${L('#/contact', '✉️', 'اتصل بنا')}${me ? L('#/profile', '👤', 'حسابي') : ''}${me && me.role === 'admin' ? L('admin.html', '⚙️', 'لوحة الإدارة') : ''}</aside>`;
+  const open = v => { $('#qpn').classList.toggle('open', v); $('#qov').classList.toggle('open', v); };
+  $('#qfab').onclick = () => open(true); $('#qx').onclick = () => open(false); $('#qov').onclick = () => open(false);
+  $$('#qpn a').forEach(a => a.onclick = () => open(false));
 }
 function footer() {
   const c = S.contact || {}, so = S.social || {};
