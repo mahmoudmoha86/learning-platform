@@ -149,3 +149,5 @@ header .auth .btn:not(.g):not(.o):not(.s){background:#7a1424;box-shadow:0 4px 12
 .lcc .ct{display:flex;flex-direction:column;min-width:0}.lcc .ct span{color:#667;font-size:.9rem}.lcc .ct b{font-size:1.05rem;word-break:break-word}.lcc a{color:inherit;text-decoration:none}.lcc .mini{margin-inline-start:6px;font-size:.95rem}
 .lcf input,.lcf textarea{border-radius:999px;background:#eceff8;border-color:transparent;padding:14px 18px}.lcf textarea{border-radius:22px}
 .lcf .lcb{width:100%;border-radius:999px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700}
+
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}@media(max-width:700px){.cgrid{grid-template-columns:1fr}}

@@ -1,5 +1,5 @@
 const root = $('#root'); let me = null, cur = 'overview';
-const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['landing', '🌐 إدارة صفحة الزائر'], ['hero', '🖼️ إدارة الإعلانات والبنرات'], ['msgs', '✉️ رسائل واستفسارات الطلاب'], ['staff', '🛡️ إدارة الموظفين'], ['roles', '🔑 الصلاحيات والأدوار'], ['logs', '🧾 سجل النشاطات'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['contactset', '📞 التواصل والسوشيال'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
+const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['landing', '🌐 إدارة صفحة الزائر'], ['hero', '🖼️ إدارة الإعلانات والبنرات'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['staff', '🛡️ إدارة الموظفين'], ['roles', '🔑 الصلاحيات والأدوار'], ['logs', '🧾 سجل النشاطات'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
 const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, p, v) => { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k] = a[k] || {}); a[ks.at(-1)] = v; };
 async function saveS() { const { error } = await sb.from('site_settings').upsert({ key: 'site', value: S }); toast(error ? 'فشل الحفظ: ' + error.message : 'تم الحفظ ✓'); if (!error) loadSettingsTheme(); }
@@ -157,7 +157,7 @@ const pages = {
   landing() { return lpPage(); },
   partners() { tableEditor('partners', 'الشركاء', [['name', 'الاسم'], ['logo_url', 'الشعار', 'img'], ['position', 'الترتيب', 'num']]); },
   about() { settingsPage('عن المنصة', [['about_title', 'العنوان'], ['about_text', 'النص', 'area'], ['about_image', 'الصورة', 'img'], ['vision', 'الرؤية', 'area'], ['mission', 'الرسالة', 'area']]); },
-  contactset() { settingsPage('التواصل والسوشيال', [['contact.email', 'البريد الإلكتروني'], ['contact.phone', 'الهاتف'], ['contact.whatsapp', 'واتساب (رقم بكود الدولة)'], ['contact.telegram', 'تيليجرام (اسم المستخدم أو الرابط)'], ['contact.address', 'العنوان'], ['contact.hours', 'مواعيد العمل'], ['social.facebook', 'رابط فيسبوك'], ['social.youtube', 'رابط يوتيوب'], ['social.instagram', 'رابط إنستجرام'], ['social.twitter', 'رابط تويتر/X'], ['social.linkedin', 'رابط لينكدإن']]); },
+  contactset() { return this.msgs(); },
   legal() { settingsPage('الشروط والخصوصية', [['terms', 'الشروط والأحكام', 'area'], ['privacy', 'سياسة الخصوصية', 'area']]); },
   async review() {
     const [{ data: pc }, { data: pl }, { data: pq }] = await Promise.all([
@@ -223,7 +223,13 @@ const pages = {
     root.querySelector('#pg').innerHTML = `<h1>التقييمات</h1>${(data || []).map(r => `<div class="lrow"><div><b>${esc(r.profiles?.full_name)}</b> على ${esc(r.courses?.title)}</div><div class="stars">${'★'.repeat(r.rating)}</div><div>${esc(r.comment)}</div><button class="btn s r" data-c="${r.course_id}" data-s="${r.student_id}">حذف</button></div>`).join('') || '<p class="muted">لا تقييمات.</p>'}`;
     $$('[data-c]').forEach(b => b.onclick = async () => { await sb.from('reviews').delete().eq('course_id', b.dataset.c).eq('student_id', b.dataset.s); show('reviews'); });
   },
-  async msgs() { root.querySelector('#pg').innerHTML = '<h1>رسائل واستفسارات الطلاب</h1><div id="lpm"></div>'; await lpMsgs($('#lpm')); },
+  async msgs() {
+    const F = [['contact.email', 'البريد الإلكتروني'], ['contact.phone', 'الهاتف'], ['contact.whatsapp', 'واتساب (رقم بكود الدولة)'], ['contact.telegram', 'تيليجرام (اسم المستخدم أو الرابط)'], ['social.linkedin', 'رابط لينكدإن'], ['social.facebook', 'رابط فيسبوك'], ['social.instagram', 'رابط إنستجرام'], ['social.youtube', 'رابط يوتيوب'], ['social.twitter', 'رابط تويتر/X'], ['contact.address', 'العنوان'], ['contact.hours', 'مواعيد العمل']];
+    const ed = me.role === 'admin' || (me.permissions && me.permissions.website);
+    root.querySelector('#pg').innerHTML = `<h1>بيانات التواصل وإرسال الرسائل</h1>${ed ? `<div class="box"><h2 style="margin-top:0">القسم الأول: بيانات التواصل</h2><div class="cgrid">${F.map(f => field(...f)).join('')}</div><p class="saved">يتم الحفظ تلقائيًا عند التعديل. تظهر في قسم "تواصل معنا" بصفحة الزائر، والخانة الفاضية تتخفي.</p></div>` : ''}<div class="box"><h2 style="margin-top:0">${ed ? 'القسم الثاني: ' : ''}الرسائل الواردة</h2><div id="lpm"></div></div>`;
+    if (ed) bindSettings(() => this.msgs());
+    await lpMsgs($('#lpm'));
+  },
   async media() {
     const folders = ['site', 'covers', 'avatars', 'faqs', 'testimonials', 'partners', 'admin'];
     let files = []; for (const f of folders) { const { data } = await sb.storage.from('media').list(f, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } }); (data || []).filter(x => x.name && x.id).forEach(x => files.push(`${f}/${x.name}`)); }
