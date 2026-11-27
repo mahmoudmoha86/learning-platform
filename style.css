@@ -135,3 +135,4 @@ header .auth .btn:not(.g):not(.o):not(.s){background:#7a1424;box-shadow:0 4px 12
 .sb .sbl.on{background:#fdeaea;color:var(--p2);border-right:4px solid var(--p)}.sb .sbl:hover{background:#fdeaea}.sb .sbl{border-bottom:0;margin:2px 0}
 
 .dl{grid-template-columns:1fr}.rail a b.ri{width:26px;flex:none;text-align:center;font-size:20px;font-style:normal;font-weight:400}
+.rail{flex-wrap:nowrap}.rail a{flex:none}
