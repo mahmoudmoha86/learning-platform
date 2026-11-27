@@ -32,6 +32,15 @@ async function uploadImage(file, folder = 'misc') {
   if (error) { toast('فشل رفع الصورة: ' + error.message); return null; }
   return sb.storage.from('media').getPublicUrl(path).data.publicUrl;
 }
+async function uploadFile(file, folder = 'files', max = 50) {
+  if (!file) return null;
+  if (file.size > max * 1024 * 1024) { toast('الملف أكبر من ' + max + ' ميجا'); return null; }
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext || 'bin'}`;
+  const { error } = await sb.storage.from('media').upload(path, file, { cacheControl: '3600', contentType: file.type || 'application/octet-stream' });
+  if (error) { toast('فشل الرفع: ' + error.message); return null; }
+  return sb.storage.from('media').getPublicUrl(path).data.publicUrl;
+}
 async function getMe() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return null;
