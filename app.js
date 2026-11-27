@@ -51,6 +51,7 @@ const IC = {
 };
 function quick() {
   let el = document.getElementById('qa'); if (!el) { el = document.createElement('div'); el.id = 'qa'; document.body.appendChild(el); }
+  if (/^#?\/?(\?.*)?$/.test(location.hash)) { el.innerHTML = ''; document.body.classList.remove('hasrail'); return; }
   const tr = (S.tracks || []).slice(0, 3), tic = ['bulb', 'case', 'book'];
   const L = (h, i, t) => `<a href="${h}" title="${t}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${IC[i]}</svg><span>${t}</span></a>`;
   el.innerHTML = `<nav class="rail" id="rail"><a class="rlogo" href="#/"><span class="lg">🎓</span><span>${esc(S.name || 'منصة تعلّم')}</span></a>
