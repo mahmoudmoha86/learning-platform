@@ -121,8 +121,8 @@ async function home(q) {
       const row = (ic, lab, val, href) => `<div class="cr"><div class="ci">${ic}</div><div class="ct"><span>${lab}</span>${href ? `<a href="${esc(href)}" ${/^http/.test(href) ? 'target="_blank" rel="noopener"' : ''}><b>${esc(val)}</b></a>` : `<b>${esc(val)}</b>`}</div></div>`;
       const rows = [
         c.email ? row(IC.mail, 'البريد الإلكتروني', c.email, 'mailto:' + c.email) : '',
-        c.phone ? row(IC.phone, 'رقم الهاتف', c.phone, 'tel:' + String(c.phone).replace(/\s/g, '')) : '',
-        (wa || tg) ? `<div class="cr"><div class="ci">${IC.chat}</div><div class="ct"><span>WhatsApp &amp; Telegram</span><b>${esc(c.whatsapp || tg)}${wa ? ` <a class="mini" href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener" title="WhatsApp">💬</a>` : ''}${tgUrl ? ` <a class="mini" href="${esc(tgUrl)}" target="_blank" rel="noopener" title="Telegram">✈️</a>` : ''}</b></div></div>` : '',
+        c.phone ? row(IC.phone, 'رقم الهاتف', '\u202A' + c.phone + '\u202C', 'tel:' + String(c.phone).replace(/\s/g, '')) : '',
+        (wa || tg) ? `<div class="cr"><div class="ci">${IC.chat}</div><div class="ct"><span>WhatsApp &amp; Telegram</span><b><bdi dir="ltr">${esc(c.whatsapp || tg)}</bdi>${wa ? ` <a class="mini" href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener" title="WhatsApp">💬</a>` : ''}${tgUrl ? ` <a class="mini" href="${esc(tgUrl)}" target="_blank" rel="noopener" title="Telegram">✈️</a>` : ''}</b></div></div>` : '',
         so.linkedin ? row(IC.li, 'LinkedIn', handle(so.linkedin), so.linkedin) : '',
         so.facebook ? row(IC.fb, 'Facebook', handle(so.facebook), so.facebook) : '',
         so.instagram ? row(IC.ig, 'Instagram', handle(so.instagram), so.instagram) : '',
