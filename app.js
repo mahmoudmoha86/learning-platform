@@ -21,13 +21,15 @@ async function loadMe() {
   header();
 }
 function header() {
-  const logo = S.logo_url ? `<img src="${esc(S.logo_url)}" alt="" style="height:36px">` : `📚 ${esc(S.name || 'منصة تعلّم')}`;
+  const logo = S.logo_url ? `<img src="${esc(S.logo_url)}" alt="" style="height:38px">` : `<span class="lg">🎓</span> ${esc(S.name || 'منصة تعلّم')}`;
   $('#top').innerHTML = S.announcement ? `<div class="ann">${esc(S.announcement)}</div>` : '';
-  $('#hdr').innerHTML = `<a class="logo" href="#/">${logo}</a><button class="burger" id="bg" aria-label="menu">☰</button>
-  <nav id="nv"><a href="#/">الرئيسية</a><a href="#/courses">الكورسات</a><a href="#/instructors">المدرسون</a><a href="#/about">عن المنصة</a><a href="#/contact">اتصل بنا</a>${me ? '<a href="#/dashboard">لوحتي</a>' : ''}${me && me.role === 'admin' ? '<a href="admin.html">لوحة الإدارة</a>' : ''}</nav>
-  <div class="auth">${me ? `<a href="#/profile" class="who">${avatar(me, 30)} <span>${esc(me.full_name || 'حسابي')}</span></a><button class="btn o s" id="out">خروج</button>` : '<a class="btn o s" href="#/login">دخول</a><a class="btn s" href="#/register">حساب جديد</a>'}</div>`;
-  $('#bg').onclick = () => $('#nv').classList.toggle('open');
-  $$('#nv a').forEach(a => a.onclick = () => $('#nv').classList.remove('open'));
+  $('#hdr').innerHTML = `<a class="logo" href="#/">${logo}</a>
+  <div class="dd"><button class="ddb" id="ddb">تصفح الدورات <i>⌄</i></button><div class="ddm" id="ddm">${cats.map(c => `<a href="#/courses?cat=${c.id}">${c.icon || '📘'} ${esc(c.name)}</a>`).join('')}<hr><a href="#/courses">كل الكورسات</a><a href="#/instructors">المدرسون</a><a href="#/about">عن المنصة</a><a href="#/contact">اتصل بنا</a>${me && me.role === 'admin' ? '<a href="admin.html">لوحة الإدارة</a>' : ''}</div></div>
+  <form class="hs2" id="hs2"><button aria-label="بحث">🔍</button><input id="hq2" placeholder="ابحث عن دورات"></form>
+  <div class="auth">${me ? `<a href="#/dashboard" class="btn s o">لوحتي</a><a href="#/profile" class="who">${avatar(me, 34)}</a><button class="btn g s" id="out">خروج</button>` : '<a class="btn g" href="#/login">تسجيل الدخول</a><a class="btn" href="#/register">إنشاء حساب</a>'}</div>`;
+  $('#ddb').onclick = e => { e.stopPropagation(); $('#ddm').classList.toggle('open'); };
+  document.onclick = () => { const m = $('#ddm'); if (m) m.classList.remove('open'); };
+  $('#hs2').onsubmit = e => { e.preventDefault(); location.hash = `#/courses?s=${encodeURIComponent($('#hq2').value)}`; };
   const o = $('#out'); if (o) o.onclick = async () => { await sb.auth.signOut(); location.hash = '#/'; await loadMe(); route(); };
 }
 function footer() {
@@ -55,10 +57,13 @@ async function home() {
     sb.from('profiles').select('*').eq('role', 'teacher').limit(4),
     sb.from('testimonials').select('*').order('position'), sb.from('partners').select('*').order('position'), sb.from('faqs').select('*').order('position').limit(5),
     cnt('courses', ['status', 'published']), cnt('profiles', ['role', 'student']), cnt('profiles', ['role', 'teacher']), cnt('enrollments')]);
-  const heroImg = S.hero_image ? `<img src="${esc(S.hero_image)}" alt="" class="heroimg">` : `<div class="heroart"><span>📚</span><span>🎓</span><span>💡</span><span>🚀</span></div>`;
-  app.innerHTML = `<section class="hero2"><div class="hx"><h1>${esc(S.hero_title || '')}</h1><p>${esc(S.hero_subtitle || '')}</p>
-  <form id="hs" class="hsearch"><input id="hq" placeholder="ابحث عن كورس..."><button class="btn y">بحث</button></form>
-  <div class="row" style="margin-top:14px"><a class="btn y" href="#/courses">${esc(S.hero_cta || 'تصفّح الكورسات')}</a>${me ? '' : '<a class="btn w" href="#/register">ابدأ مجانًا</a>'}</div></div>${heroImg}</section>
+  const trk = (S.tracks || []).slice(0, 3);
+  const grads = ['#1e3a8a,#3b82f6', '#0b1f4d,#2563eb', '#172554,#60a5fa'];
+  const trkCards = trk.map((t, i) => `<a class="tcard" href="#/courses" style="${t.image ? `background-image:url('${esc(t.image)}')` : `background:linear-gradient(145deg,${grads[i % 3]})`}"><span class="te">${t.image ? '' : esc(t.emoji || '📘')}</span><span class="ta">↖</span><span class="tl">${esc(t.title)}</span></a>`).join('');
+  app.innerHTML = `<section class="hero3"><span class="deco d1"></span><span class="deco d2"></span><span class="deco d3"></span><button class="arr l" aria-label="prev">→</button><button class="arr r" aria-label="next">←</button>
+  <span class="pill">أكثر من ${Math.max(nc, 1)} دورة مجانية</span><h1>${esc(S.hero_title || '')}</h1><p>${esc(S.hero_subtitle || '')}</p>
+  <div class="tcards">${trkCards}</div></section>
+  <div class="row" style="justify-content:center;margin:-6px 0 18px"><a class="btn" href="#/courses">${esc(S.hero_cta || 'تصفّح الكورسات')}</a>${me ? '' : '<a class="btn o" href="#/register">ابدأ مجانًا</a>'}</div>
   <div class="stats">${[[nc, 'كورس'], [ns, 'طالب'], [nt, 'مدرس'], [ne, 'تسجيل']].map(([n, l]) => `<div class="stat"><b>${n}</b>${l}</div>`).join('')}</div>
   ${(S.tracks || []).length ? `<h2 class="sec">مجالات التعلّم</h2><div class="grid3">${S.tracks.map(t => `<a class="card trk" href="#/courses"><div class="bd"><div class="big">${esc(t.emoji || '📘')}</div><h3>${esc(t.title)}</h3><p class="muted">${esc(t.desc)}</p></div></a>`).join('')}</div>` : ''}
   <h2 class="sec">التصنيفات</h2><div class="grid">${cats.map(c => `<a class="card" href="#/courses?cat=${c.id}"><div class="bd" style="text-align:center"><div class="big">${c.icon || '📘'}</div><b>${esc(c.name)}</b><span class="muted">${esc(c.description || '')}</span></div></a>`).join('')}</div>
@@ -70,7 +75,6 @@ async function home() {
   ${(par.data || []).length ? `<h2 class="sec">شركاؤنا</h2><div class="partners">${par.data.map(p => p.logo_url ? `<img src="${esc(p.logo_url)}" alt="${esc(p.name)}" title="${esc(p.name)}">` : `<span class="tag">${esc(p.name)}</span>`).join('')}</div>` : ''}
   ${(faq.data || []).length ? `<h2 class="sec">أسئلة شائعة</h2>${faq.data.map(f => `<details class="box fq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}` : ''}
   <div class="cta"><h2>جاهز تبدأ؟</h2><p>أنشئ حسابك مجانًا وابدأ التعلّم الآن.</p><a class="btn y" href="${me ? '#/courses' : '#/register'}">${me ? 'تصفّح الكورسات' : 'إنشاء حساب'}</a></div>`;
-  $('#hs').onsubmit = e => { e.preventDefault(); location.hash = `#/courses?s=${encodeURIComponent($('#hq').value)}`; };
 }
 async function courses(q) {
   const p = new URLSearchParams(q || ''); const cat = p.get('cat') || '', s = p.get('s') || '', lv = p.get('lv') || '', so = p.get('so') || 'new';
@@ -171,19 +175,55 @@ async function cert(cid) {
   <div class="row noprint" style="justify-content:center;margin-top:16px"><button class="btn" onclick="window.print()">🖨️ طباعة / حفظ PDF</button><a class="btn o" href="#/dashboard">رجوع</a></div></div>`;
 }
 function authForm(reg) {
-  app.innerHTML = `<div class="box narrow"><h2>${reg ? 'حساب جديد' : 'تسجيل الدخول'}</h2>
-  ${reg ? `<label>الاسم</label><input id="nm"><label>نوع الحساب</label><select id="rl"><option value="student">طالب</option><option value="teacher">مدرس</option></select>` : ''}
-  <label>البريد الإلكتروني</label><input id="em" type="email"><label>كلمة المرور</label><input id="pw" type="password">
-  <button class="btn" id="ok" style="width:100%">${reg ? 'إنشاء الحساب' : 'دخول'}</button>
-  <p class="muted">${reg ? '<a href="#/login">عندي حساب</a>' : '<a href="#/register">إنشاء حساب جديد</a> · <a href="#/contact">نسيت كلمة المرور؟</a>'}</p></div>`;
-  $('#ok').onclick = async () => {
-    const email = $('#em').value.trim(), password = $('#pw').value; let r;
-    if (reg) { if (password.length < 6) return toast('كلمة المرور 6 أحرف على الأقل'); r = await sb.auth.signUp({ email, password, options: { data: { full_name: $('#nm').value.trim(), role: $('#rl').value } } }); }
-    else r = await sb.auth.signInWithPassword({ email, password });
-    if (r.error) { toast(r.error.message); return; }
-    if (!r.data.session) { toast('تحقق من بريدك لتأكيد الحساب'); return; }
-    await loadMe(); location.hash = '#/dashboard';
+  const fl = (id, lab, type = 'text', extra = '') => `<div class="fl"><label for="${id}">${lab}</label><input id="${id}" type="${type}" ${extra}></div>`;
+  const stepper = n => `<div class="stp">${['بيانات الحساب', 'نوع الحساب', 'أكمل حسابك'].map((t, i) => `<div class="${i + 1 <= n ? 'on' : ''}"><i></i><b>${t}</b></div>`).join('')}</div>`;
+  if (!reg) {
+    app.innerHTML = `<div class="afm"><h1>تسجيل الدخول</h1>${fl('em', 'البريد الإلكتروني', 'email')}<div class="fl"><label for="pw">كلمة المرور</label><input id="pw" type="password"><button type="button" class="eye" id="ey">👁</button></div>
+    <button class="btn big2" id="ok">دخول</button><p class="muted" style="text-align:center"><a href="#/register">إنشاء حساب جديد</a> · <a href="#/contact">نسيت كلمة المرور؟</a></p></div>`;
+    $('#ey').onclick = () => { const p = $('#pw'); p.type = p.type === 'password' ? 'text' : 'password'; };
+    $('#ok').onclick = async () => {
+      const r = await sb.auth.signInWithPassword({ email: $('#em').value.trim(), password: $('#pw').value });
+      if (r.error) { toast('بيانات الدخول غير صحيحة'); return; }
+      await loadMe(); location.hash = '#/dashboard';
+    };
+    return;
+  }
+  const d = { role: 'student' };
+  const step1 = () => {
+    app.innerHTML = `<div class="afm"><h1>إنشاء حساب جديد</h1>${stepper(1)}${fl('fn', 'الاسم الأول')}${fl('ln', 'اسم العائلة')}${fl('em', 'البريد الإلكتروني', 'email')}
+    <div class="fl ph"><label for="ph">رقم المحمول</label><span class="cc">🇪🇬 +20</span><input id="ph" inputmode="numeric" placeholder="1XXXXXXXXX"></div>
+    <div class="fl"><label for="pw">كلمة المرور</label><input id="pw" type="password"><button type="button" class="eye" id="ey">👁</button></div>
+    <label class="tm"><input type="checkbox" id="tm"> من خلال الاستمرار، فإنك توافق على <a href="#/terms">الشروط والأحكام</a> و<a href="#/privacy">سياسة الخصوصية</a> الخاصة بنا</label>
+    <button class="btn big2" id="ok">التالي</button><div class="or"><span>أو</span></div><p class="muted" style="text-align:center">عندك حساب؟ <a href="#/login">سجّل دخولك</a></p></div>`;
+    $('#ey').onclick = () => { const p = $('#pw'); p.type = p.type === 'password' ? 'text' : 'password'; };
+    ['fn', 'ln', 'em', 'ph'].forEach(k => { if (d[k]) $('#' + k).value = d[k]; });
+    $('#ok').onclick = () => {
+      d.fn = $('#fn').value.trim(); d.ln = $('#ln').value.trim(); d.em = $('#em').value.trim(); d.ph = $('#ph').value.trim(); d.pw = $('#pw').value;
+      if (!d.fn || !d.em) return toast('اكتب الاسم والبريد الإلكتروني');
+      if (d.pw.length < 6) return toast('كلمة المرور 6 أحرف على الأقل');
+      if (!$('#tm').checked) return toast('وافق على الشروط والأحكام للمتابعة');
+      step2();
+    };
   };
+  const step2 = () => {
+    app.innerHTML = `<div class="afm"><h1>إنشاء حساب جديد</h1>${stepper(2)}<p class="muted" style="text-align:center">اختار نوع حسابك</p>
+    <div class="roles"><button class="rl ${d.role === 'student' ? 'on' : ''}" data-r="student"><span>🎓</span><b>طالب</b><small>أتعلم وأسجّل في الكورسات</small></button><button class="rl ${d.role === 'teacher' ? 'on' : ''}" data-r="teacher"><span>👨‍🏫</span><b>مدرس</b><small>أنشئ كورسات وأشاركها</small></button></div>
+    <button class="btn big2" id="ok">أنشئ حسابك</button><button class="btn g big2" id="bk" style="margin-top:8px">رجوع</button></div>`;
+    $$('.rl').forEach(b => b.onclick = () => { d.role = b.dataset.r; $$('.rl').forEach(x => x.classList.toggle('on', x === b)); });
+    $('#bk').onclick = step1;
+    $('#ok').onclick = async () => {
+      const r = await sb.auth.signUp({ email: d.em, password: d.pw, options: { data: { full_name: (d.fn + ' ' + d.ln).trim(), role: d.role } } });
+      if (r.error) { toast(r.error.message); return; }
+      if (!r.data.session) { toast('تحقق من بريدك لتأكيد الحساب'); return; }
+      if (d.ph) await sb.from('profiles').update({ phone: '+20' + d.ph.replace(/^0/, '') }).eq('id', r.data.user.id);
+      await loadMe(); step3();
+    };
+  };
+  const step3 = () => {
+    app.innerHTML = `<div class="afm" style="text-align:center"><h1>إنشاء حساب جديد</h1>${stepper(3)}<div style="font-size:4rem">🎉</div><h2>أهلاً بيك يا ${esc(d.fn)}!</h2><p class="muted">تم إنشاء حسابك بنجاح. تقدر تكمل بياناتك (الصورة والنبذة) من صفحة حسابك.</p>
+    <a class="btn big2" href="#/dashboard">ابدأ رحلتك</a><a class="btn o big2" href="#/profile" style="margin-top:8px">أكمل بيانات حسابي</a></div>`;
+  };
+  step1();
 }
 async function profilePage() {
   if (needLogin()) return;
@@ -203,8 +243,25 @@ async function dashboard() {
   const { data: at } = await sb.from('quiz_attempts').select('score,total').eq('student_id', me.id);
   const done = rows.filter(r => r.pg.pct === 100 && r.pg.total).length;
   const aq = (at || []).length ? Math.round((at.reduce((s, a) => s + a.score / a.total, 0) / at.length) * 100) : 0;
-  app.innerHTML = `<h1>أهلاً ${esc(me.full_name)} 👋</h1><div class="stats"><div class="stat"><b>${rows.length}</b>كورسات مسجّل بها</div><div class="stat"><b>${done}</b>كورسات مكتملة</div><div class="stat"><b>${aq}%</b>متوسط الاختبارات</div></div>
-  <h3>كورساتي</h3><div class="grid">${rows.map(({ c, pg }) => courseCard(c, `<div class="bar"><i style="width:${pg.pct}%"></i></div><span class="muted">${pg.pct}%</span>${pg.pct === 100 && pg.total ? `<a href="#/cert/${c.id}">🏅 الشهادة</a>` : ''}`, `#/learn/${c.id}`).replace('التفاصيل', 'تابع')).join('') || '<p class="muted">لم تسجّل في أي كورس بعد. <a href="#/courses">تصفّح الكورسات</a></p>'}</div>`;
+  const mine = new Set(rows.map(r => r.c.id));
+  const { data: sg } = await sb.from('courses').select(CSEL).eq('status', 'published').order('featured', { ascending: false }).limit(12);
+  const sug = (sg || []).filter(c => !mine.has(c.id)).slice(0, 6);
+  const cur = rows.filter(r => !(r.pg.pct === 100 && r.pg.total)), fin = rows.filter(r => r.pg.pct === 100 && r.pg.total);
+  const empty = (m, t) => `<div class="emp"><div class="ei">🗂️</div><div><h3>${m}</h3><a class="btn" href="#/courses">${t}</a></div></div>`;
+  const grid = (arr, f) => `<div class="grid">${arr.map(f).join('')}</div>`;
+  const prog = ({ c, pg }) => courseCard(c, `<div class="bar"><i style="width:${pg.pct}%"></i></div><span class="muted">${pg.pct}%</span>${pg.pct === 100 && pg.total ? `<a href="#/cert/${c.id}">🏅 الشهادة</a>` : ''}`, `#/learn/${c.id}`).replace('التفاصيل', 'تابع');
+  const tr = (S.tracks || []).slice(0, 3);
+  app.innerHTML = `<div class="dl"><aside class="sb"><div class="sbh">🎓 ${esc(S.name || 'منصة تعلّم')}</div>
+  <div class="sbg"><b>▦ لوحتي التعليمية</b><a href="#dcur" class="on">الدورات الحالية</a><a href="#dfin">الدورات المنتهية</a><a href="#dper">أدائي</a><a href="#dcer">شهاداتي</a></div>
+  ${tr.map(t => `<a class="sbl" href="#/courses">${esc(t.emoji || '📘')} ${esc(t.title)}</a>`).join('')}
+  <a class="sbl" href="#/courses">📚 تصفح جميع الدورات</a><a class="sbl" href="#dsug">✨ المقترح لي</a><a class="sbl" href="#/profile">👤 حسابي</a></aside>
+  <div class="dm"><h1>أهلاً ${esc(me.full_name)} 👋</h1><div class="stats"><div class="stat"><b>${rows.length}</b>كورسات مسجّل بها</div><div class="stat"><b>${fin.length}</b>كورسات مكتملة</div><div class="stat"><b>${aq}%</b>متوسط الاختبارات</div></div>
+  <section id="dcur"><h2>الدورات الحالية</h2>${cur.length ? grid(cur, prog) : '<p class="muted">لا توجد لديك دورات حالية</p>' + empty('', 'تصفح تعليمي'.replace('تعليمي', 'الدورات'))}</section>
+  <section id="dfin"><h2>الدورات المنتهية</h2>${fin.length ? grid(fin, prog) : '<p class="muted">لا توجد دورات منتهية بعد</p>'}</section>
+  <section id="dper"><h2>أدائي</h2><p class="muted">${(at || []).length} محاولة اختبار، متوسط النتيجة ${aq}%</p></section>
+  <section id="dcer"><h2>شهاداتي</h2>${fin.length ? fin.map(({ c }) => `<a class="btn o s" href="#/cert/${c.id}">🏅 ${esc(c.title)}</a>`).join(' ') : '<p class="muted">أكمل دورة لتحصل على شهادتك</p>'}</section>
+  <section id="dsug" class="sg"><h2>المقترح لي</h2>${sug.length ? grid(sug, c => courseCard(c)) : empty('لا توجد دورات مقترحة حاليًا', 'تصفح الدورات')}</section></div></div>`;
+  $$('.sb a[href^="#d"]').forEach(a => a.onclick = e => { e.preventDefault(); const t = $(a.getAttribute('href')); if (t) t.scrollIntoView({ behavior: 'smooth' }); });
 }
 async function teacherDash() {
   const q = sb.from('courses').select('*').order('created_at', { ascending: false }); if (me.role === 'teacher') q.eq('teacher_id', me.id);
