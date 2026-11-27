@@ -109,13 +109,14 @@ async function show(k) {
   try { await pages[k](); } catch (e) { root.querySelector('#pg').innerHTML = '<p>حصل خطأ: ' + esc(e.message) + '</p>'; console.error(e); }
 }
 function shell() {
-  root.innerHTML = `<div class="shell"><aside class="side"><h2>⚙️ لوحة الإدارة</h2>${SECTIONS.map(([k, l]) => `<a data-k="${k}">${l}</a>`).join('')}<a href="index.html" target="_blank">↗ فتح الموقع</a><a id="lo">🚪 خروج</a></aside><section class="cont" id="pg"></section></div>`;
+  root.innerHTML = `<div class="shell"><aside class="side"><div class="sbh"><span class="lg">🎓</span> ${esc(S.name || "منصة تعلّم")}<small>لوحة الإدارة</small></div>${SECTIONS.map(([k, l]) => `<a data-k="${k}">${l}</a>`).join('')}<a href="index.html" target="_blank">↗ فتح الموقع</a><a id="lo">🚪 خروج</a></aside><div class="mw"><div class="tb"><div class="hs2"><button aria-label="بحث">🔍</button><input id="sq" placeholder="ابحث في الأقسام"></div><span class="bell">🔔</span><span class="adm-u">👤 ${esc(me.full_name || "الأدمن")}</span></div><section class="cont" id="pg"></section></div></div>`;
   $$('.side a[data-k]').forEach(a => a.onclick = () => show(a.dataset.k));
+  $('#sq').oninput = e => { const v = e.target.value.trim(); $$('.side a[data-k]').forEach(a => a.style.display = !v || a.innerText.includes(v) ? '' : 'none'); };
   $('#lo').onclick = async () => { await sb.auth.signOut(); boot(); };
   const k = location.hash.slice(1); show(pages[k] ? k : 'overview');
 }
 function login(msg = '') {
-  root.innerHTML = `<div class="box narrow"><h2>دخول الإدارة</h2>${msg ? `<p style="color:#d92d20">${msg}</p>` : ''}<label>البريد الإلكتروني</label><input id="em" type="email"><label>كلمة المرور</label><input id="pw" type="password"><button class="btn" id="ok" style="width:100%">دخول</button><p><a href="index.html">← العودة للموقع</a></p></div>`;
+  root.innerHTML = `<div class="afm"><h1>دخول الإدارة</h1>${msg ? `<p style="color:#d92d20">${msg}</p>` : ''}<div class="fl"><label for="em">البريد الإلكتروني</label><input id="em" type="email"></div><div class="fl"><label for="pw">كلمة المرور</label><input id="pw" type="password"></div><button class="btn big2" id="ok">دخول</button><p><a href="index.html">← العودة للموقع</a></p></div>`;
   $('#ok').onclick = async () => { const { error } = await sb.auth.signInWithPassword({ email: $('#em').value.trim(), password: $('#pw').value }); if (error) toast(error.message); else boot(); };
 }
 async function boot() {
