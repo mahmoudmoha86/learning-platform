@@ -193,7 +193,7 @@ function authForm(reg) {
     app.innerHTML = `<div class="afm"><h1>إنشاء حساب جديد</h1>${stepper(1)}${fl('fn', 'الاسم الأول')}${fl('ln', 'اسم العائلة')}${fl('em', 'البريد الإلكتروني', 'email')}
     <div class="fl ph"><label for="ph">رقم المحمول</label><span class="cc">🇪🇬 +20</span><input id="ph" inputmode="numeric" placeholder="1XXXXXXXXX"></div>
     <div class="fl"><label for="pw">كلمة المرور</label><input id="pw" type="password"><button type="button" class="eye" id="ey">👁</button></div>
-    <label class="tm"><input type="checkbox" id="tm"> من خلال الاستمرار، فإنك توافق على <a href="#/terms">الشروط والأحكام</a> و<a href="#/privacy">سياسة الخصوصية</a> الخاصة بنا</label>
+    <label class="tm"><input type="checkbox" id="tm"><span>من خلال الاستمرار، فإنك توافق على <a href="#/terms">الشروط والأحكام</a> و<a href="#/privacy">سياسة الخصوصية</a> الخاصة بنا</span></label>
     <button class="btn big2" id="ok">التالي</button><div class="or"><span>أو</span></div><p class="muted" style="text-align:center">عندك حساب؟ <a href="#/login">سجّل دخولك</a></p></div>`;
     $('#ey').onclick = () => { const p = $('#pw'); p.type = p.type === 'password' ? 'text' : 'password'; };
     ['fn', 'ln', 'em', 'ph'].forEach(k => { if (d[k]) $('#' + k).value = d[k]; });
