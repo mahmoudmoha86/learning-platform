@@ -139,7 +139,7 @@ async function accountsPage(kind) {
 }
 const pages = {
   async overview() {
-    const cnt = async (t, f) => { let q = sb.from(t).select('*', { count: 'exact', head: true }); if (f) q = q.eq(...f); return (await q).count || 0; };
+    const cnt = async (t, f) => { let q = sb.from(t).select('created_at', { count: 'exact', head: true }); if (f) q = q.eq(...f); return (await q).count || 0; };
     const [st, te, co, pe, en, ms, rv] = await Promise.all([cnt('profiles', ['role', 'student']), cnt('profiles', ['role', 'teacher']), cnt('courses', ['status', 'published']), cnt('courses', ['status', 'pending']), cnt('enrollments'), cnt('messages', ['is_read', false]), cnt('reviews')]);
     const [{ data: us }, { data: pend }] = await Promise.all([sb.from('profiles').select('full_name,role,created_at').order('created_at', { ascending: false }).limit(6), sb.from('courses').select('id,title').eq('status', 'pending')]);
     root.querySelector('#pg').innerHTML = `<h1>نظرة عامة</h1><div class="stats">${[[st, 'طلاب'], [te, 'مدرسون'], [co, 'كورسات منشورة'], [pe, 'بانتظار الموافقة'], [en, 'تسجيلات'], [ms, 'رسائل جديدة'], [rv, 'تقييمات']].map(([n, l]) => `<div class="stat"><b>${n}</b>${l}</div>`).join('')}</div>
