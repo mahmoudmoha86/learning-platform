@@ -58,6 +58,8 @@ function quick() {
   ${tr.map((t, i) => L('#/courses', tic[i] || 'book', esc(t.title))).join('')}
   ${L('#/courses', 'books', 'تصفح جميع الدورات')}${me ? L('#/dashboard', 'star', 'المقترح لي') + L('#/dashboard', 'chart', 'أدائي وشهاداتي') : ''}${L('#/instructors', 'users', 'المدرسون')}${L('#/faq', 'help', 'الأسئلة الشائعة')}${L('#/contact', 'mail', 'اتصل بنا')}${me ? L('#/profile', 'user', 'حسابي') : ''}${me && me.role === 'admin' ? L('admin.html', 'gear', 'لوحة الإدارة') : ''}</nav>`;
   document.body.classList.add('hasrail'); const r = $('#rail');
+  const mark = () => { const h = location.hash || '#/'; let hit = null; $$('#rail a:not(.rlogo)').forEach(a => { a.classList.remove('act'); if (!hit && a.getAttribute('href') === h) hit = a; }); if (!hit && (h === '#/' || h === '')) hit = $('#rail a:not(.rlogo)'); if (hit) hit.classList.add('act'); };
+  mark(); window.removeEventListener('hashchange', window.__rm || (() => {})); window.__rm = mark; window.addEventListener('hashchange', mark);
   r.onclick = e => { if (!e.target.closest('a')) r.classList.toggle('x'); else r.classList.remove('x'); };
 }
 function footer() {
