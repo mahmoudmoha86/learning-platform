@@ -18,7 +18,22 @@ async function loadSettings() {
   if (S.primary) { r.setProperty('--p', S.primary); r.setProperty('--p2', shade(S.primary, -35)); }
   if (S.accent) r.setProperty('--a', S.accent);
   if (S.name) document.title = S.name;
+  try { const { data: l } = await sb.from('site_settings').select('value').eq('key', 'landing').maybeSingle(); LND = (l && l.value) || null; } catch (e) { LND = null; }
+  applyDesign(LND && LND.design);
   return S;
+}
+let LND = null;
+function applyDesign(d) {
+  d = d || {}; const r = document.documentElement.style;
+  if (d.primary) { r.setProperty('--p', d.primary); r.setProperty('--p2', shade(d.primary, -35)); }
+  if (d.accent) r.setProperty('--a', d.accent);
+  if (d.bg) r.setProperty('--bg', d.bg);
+  if (d.font) document.body.style.fontFamily = d.font + ',Cairo,sans-serif';
+}
+function applySeo(o) {
+  o = o || {}; if (o.title) document.title = o.title;
+  const m = (attr, name, val) => { if (!val) return; let e = document.head.querySelector(`meta[${attr}="${name}"]`); if (!e) { e = document.createElement('meta'); e.setAttribute(attr, name); document.head.appendChild(e); } e.setAttribute('content', val); };
+  m('name', 'description', o.description); m('name', 'keywords', o.keywords); m('property', 'og:title', o.title); m('property', 'og:description', o.description); m('property', 'og:image', o.image); m('name', 'twitter:card', o.image ? 'summary_large_image' : '');
 }
 function shade(hex, pct) {
   const n = parseInt((hex || '#1b5fd1').slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;

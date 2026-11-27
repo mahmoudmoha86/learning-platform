@@ -136,3 +136,8 @@ header .auth .btn:not(.g):not(.o):not(.s){background:#7a1424;box-shadow:0 4px 12
 
 .dl{grid-template-columns:1fr}.rail a b.ri{width:26px;flex:none;text-align:center;font-size:20px;font-style:normal;font-weight:400}
 .rail{flex-wrap:nowrap}.rail a{flex:none}
+
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}.g3 .box{margin-bottom:0}
+.lp-ban{display:grid;gap:14px;margin:0 0 18px}.lp-ban img{width:100%;border-radius:16px;display:block}
+@media(max-width:1000px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.g4{grid-template-columns:1fr}.g3{grid-template-columns:1fr}}

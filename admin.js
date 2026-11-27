@@ -1,5 +1,5 @@
 const root = $('#root'); let me = null, cur = 'overview';
-const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['hero', '🖼️ إدارة الإعلانات والبنرات'], ['msgs', '✉️ رسائل واستفسارات الطلاب'], ['staff', '🛡️ إدارة الموظفين'], ['roles', '🔑 الصلاحيات والأدوار'], ['logs', '🧾 سجل النشاطات'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['tracks', '🧭 مجالات التعلّم'], ['features', '✨ المميزات'], ['faqs', '❓ الأسئلة الشائعة'], ['testi', '💬 آراء الطلاب'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['contactset', '📞 التواصل والسوشيال'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
+const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['landing', '🌐 إدارة صفحة الزائر'], ['hero', '🖼️ إدارة الإعلانات والبنرات'], ['msgs', '✉️ رسائل واستفسارات الطلاب'], ['staff', '🛡️ إدارة الموظفين'], ['roles', '🔑 الصلاحيات والأدوار'], ['logs', '🧾 سجل النشاطات'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['contactset', '📞 التواصل والسوشيال'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
 const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, p, v) => { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k] = a[k] || {}); a[ks.at(-1)] = v; };
 async function saveS() { const { error } = await sb.from('site_settings').upsert({ key: 'site', value: S }); toast(error ? 'فشل الحفظ: ' + error.message : 'تم الحفظ ✓'); if (!error) loadSettingsTheme(); }
@@ -42,7 +42,7 @@ function tableEditor(table, title, fields, order = 'position') { // fields: [key
 }
 const fmtDT = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 const PERMS = [['users', 'إدارة الطلاب والمدرسين'], ['courses', 'إدارة الكورسات والمحتوى'], ['exams', 'إدارة الامتحانات'], ['support', 'الدعم الفني والرسائل'], ['website', 'إدارة الموقع'], ['logs', 'سجل النشاطات'], ['finance', 'الحسابات المالية'], ['reports', 'التقارير']];
-const PERM_OF = { overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', sep: null };
+const PERM_OF = { landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', sep: null };
 const can = k => !me ? false : me.role === 'admin' || (me.role === 'supervisor' && (PERM_OF[k] === null || (PERM_OF[k] !== 'ADMIN' && me.permissions && me.permissions[PERM_OF[k]])));
 function modal(html, onReady) {
   const o = document.createElement('div'); o.className = 'mdl'; o.innerHTML = `<div class="mdb"><button class="mdx" aria-label="إغلاق">✕</button>${html}</div>`; document.body.append(o);
@@ -149,11 +149,12 @@ const pages = {
     $$('[data-pub]').forEach(b => b.onclick = async () => { await sb.from('courses').update({ status: 'published' }).eq('id', b.dataset.pub); show('overview'); });
   },
   general() { settingsPage('إعدادات الموقع', [['name', 'اسم المنصة'], ['tagline', 'الشعار النصي'], ['logo_url', 'اللوجو', 'img'], ['announcement', 'شريط الإعلان (اتركه فارغًا لإخفائه)'], ['primary', 'اللون الأساسي', 'color'], ['accent', 'اللون الثانوي', 'color'], ['footer_text', 'نص أسفل الصفحة']]); },
-  hero() { settingsPage('الصفحة الرئيسية', [['hero_title', 'العنوان الرئيسي'], ['hero_subtitle', 'الوصف', 'area'], ['hero_cta', 'نص الزر'], ['hero_image', 'صورة الواجهة (اتركها فارغة لعرض رسم افتراضي)', 'img']]); },
-  tracks() { listEditor('tracks', 'مجالات التعلّم (الصفحة الرئيسية)', [['emoji', 'إيموجي'], ['title', 'العنوان'], ['desc', 'الوصف']]); },
-  features() { listEditor('features', 'المميزات (الصفحة الرئيسية)', [['emoji', 'إيموجي'], ['title', 'العنوان'], ['desc', 'الوصف']]); },
-  faqs() { tableEditor('faqs', 'الأسئلة الشائعة', [['q', 'السؤال'], ['a', 'الإجابة', 'area'], ['position', 'الترتيب', 'num']]); },
-  testi() { tableEditor('testimonials', 'آراء الطلاب', [['name', 'الاسم'], ['role', 'الصفة'], ['text', 'النص', 'area'], ['avatar_url', 'الصورة', 'img'], ['position', 'الترتيب', 'num']]); },
+  hero() { return lpPage('banners'); },
+  tracks() { return lpPage('hero'); },
+  features() { return lpPage('features'); },
+  faqs() { return lpPage('faqs'); },
+  testi() { return lpPage('reviews'); },
+  landing() { return lpPage(); },
   partners() { tableEditor('partners', 'الشركاء', [['name', 'الاسم'], ['logo_url', 'الشعار', 'img'], ['position', 'الترتيب', 'num']]); },
   about() { settingsPage('عن المنصة', [['about_title', 'العنوان'], ['about_text', 'النص', 'area'], ['about_image', 'الصورة', 'img'], ['vision', 'الرؤية', 'area'], ['mission', 'الرسالة', 'area']]); },
   contactset() { settingsPage('التواصل والسوشيال', [['contact.email', 'البريد الإلكتروني'], ['contact.phone', 'الهاتف'], ['contact.whatsapp', 'واتساب (رقم بكود الدولة)'], ['contact.address', 'العنوان'], ['contact.hours', 'مواعيد العمل'], ['social.facebook', 'رابط فيسبوك'], ['social.youtube', 'رابط يوتيوب'], ['social.instagram', 'رابط إنستجرام'], ['social.twitter', 'رابط تويتر/X'], ['social.linkedin', 'رابط لينكدإن']]); },
@@ -222,12 +223,7 @@ const pages = {
     root.querySelector('#pg').innerHTML = `<h1>التقييمات</h1>${(data || []).map(r => `<div class="lrow"><div><b>${esc(r.profiles?.full_name)}</b> على ${esc(r.courses?.title)}</div><div class="stars">${'★'.repeat(r.rating)}</div><div>${esc(r.comment)}</div><button class="btn s r" data-c="${r.course_id}" data-s="${r.student_id}">حذف</button></div>`).join('') || '<p class="muted">لا تقييمات.</p>'}`;
     $$('[data-c]').forEach(b => b.onclick = async () => { await sb.from('reviews').delete().eq('course_id', b.dataset.c).eq('student_id', b.dataset.s); show('reviews'); });
   },
-  async msgs() {
-    const { data } = await sb.from('messages').select('*').order('created_at', { ascending: false });
-    root.querySelector('#pg').innerHTML = `<h1>الرسائل</h1>${(data || []).map(m => `<div class="box" style="${m.is_read ? '' : 'border-color:var(--p)'}"><b>${esc(m.subject || '(بدون موضوع)')}</b> <span class="muted">من ${esc(m.name)} ${esc(m.email)} · ${fmtDate(m.created_at)}</span><p style="white-space:pre-wrap">${esc(m.body)}</p><div class="row">${m.is_read ? '' : `<button class="btn s" data-r="${m.id}">تمت القراءة</button>`}${m.email ? `<a class="btn s o" href="mailto:${esc(m.email)}">رد بالإيميل</a>` : ''}<button class="btn s r" data-d="${m.id}">حذف</button></div></div>`).join('') || '<p class="muted">لا رسائل.</p>'}`;
-    $$('[data-r]').forEach(b => b.onclick = async () => { await sb.from('messages').update({ is_read: true }).eq('id', b.dataset.r); show('msgs'); });
-    $$('[data-d]').forEach(b => b.onclick = async () => { await sb.from('messages').delete().eq('id', b.dataset.d); show('msgs'); });
-  },
+  async msgs() { root.querySelector('#pg').innerHTML = '<h1>رسائل واستفسارات الطلاب</h1><div id="lpm"></div>'; await lpMsgs($('#lpm')); },
   async media() {
     const folders = ['site', 'covers', 'avatars', 'faqs', 'testimonials', 'partners', 'admin'];
     let files = []; for (const f of folders) { const { data } = await sb.storage.from('media').list(f, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } }); (data || []).filter(x => x.name && x.id).forEach(x => files.push(`${f}/${x.name}`)); }

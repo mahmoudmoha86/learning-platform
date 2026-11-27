@@ -81,30 +81,46 @@ function courseCard(c, extra = '', link = null) {
 }
 const CSEL = '*,profiles!teacher_id(full_name,avatar_url),reviews(rating)';
 
-async function home() {
-  const cnt = async (t, f) => { let q = sb.from(t).select('*', { count: 'exact', head: true }); if (f) q = q.eq(...f); return (await q).count || 0; };
-  const [feat, instr, tes, par, faq, nc, ns, nt, ne] = await Promise.all([
-    sb.from('courses').select(CSEL).eq('status', 'published').order('featured', { ascending: false }).order('created_at', { ascending: false }).limit(6),
-    sb.from('profiles').select(PCOLS).eq('role', 'teacher').eq('suspended', false).limit(4),
-    sb.from('testimonials').select('*').order('position'), sb.from('partners').select('*').order('position'), sb.from('faqs').select('*').order('position').limit(5),
-    cnt('courses', ['status', 'published']), cnt('profiles', ['role', 'student']), cnt('profiles', ['role', 'teacher']), cnt('enrollments')]);
-  const trk = (S.tracks || []).slice(0, 3);
+const LP_SECS = ['hero', 'banners', 'courses', 'teachers', 'features', 'reviews', 'faq', 'contact', 'tracks', 'categories', 'partners', 'cta'];
+async function home(q) {
+  const cnt = async (t, f) => { let qq = sb.from(t).select('id', { count: 'exact', head: true }); if (f) qq = qq.eq(...f); return (await qq).count || 0; };
+  let L = LND, prev = false;
+  if (/preview=1/.test(q || '') && me && (me.role === 'admin' || me.role === 'supervisor')) { const { data } = await sb.from('site_settings').select('value').eq('key', 'landing_draft').maybeSingle(); if (data) { L = data.value; prev = true; } }
+  L = L || { hero: { show: true, title: S.hero_title, subtitle: S.hero_subtitle, cta: S.hero_cta, tracks: S.tracks }, design: {} };
+  const H = L.hero || {}, D = L.design || {};
+  const shown = a => (a || []).filter(x => x.show !== false);
+  const secs = (D.sections && D.sections.length ? D.sections : LP_SECS.map(k => ({ k, show: !['tracks', 'categories', 'partners', 'cta'].includes(k) }))).filter(x => x.show !== false).map(x => x.k);
+  const cids = shown(L.courses).map(x => x.id), tl = shown(L.teachers);
+  const [crs, tch, par, nc] = await Promise.all([
+    cids.length && secs.includes('courses') ? sb.from('courses').select(CSEL).eq('status', 'published').in('id', cids) : { data: [] },
+    tl.length && secs.includes('teachers') ? sb.from('profiles').select(PCOLS).in('id', tl.map(x => x.id)) : { data: [] },
+    secs.includes('partners') ? sb.from('partners').select('*').order('position') : { data: [] },
+    cnt('courses', ['status', 'published'])]);
+  applyDesign(D); applySeo(L.seo);
   const grads = ['#8c0000,#e30000', '#6e0000,#c90000', '#a00000,#f04040'];
+  const trk = (H.tracks || []).slice(0, 3);
   const trkCards = trk.map((t, i) => `<a class="tcard${t.image ? ' img' : ''}" href="#/courses" style="${t.image ? `background-image:url('${esc(t.image)}')` : `background:linear-gradient(145deg,${grads[i % 3]})`}"><span class="te">${t.image ? '' : esc(t.emoji || '📘')}</span><span class="ta">↖</span><span class="tl">${esc(t.title)}</span></a>`).join('');
-  app.innerHTML = `<section class="hero3"><span class="deco d1"></span><span class="deco d2"></span><span class="deco d3"></span>
-  <span class="pill">أكثر من ${Math.max(nc, 1)} دورة مجانية</span><h1>${esc(S.hero_title || '')}</h1><p>${esc(S.hero_subtitle || '')}</p>
+  const price = c => `<div class="tag y" style="align-self:flex-start;margin-top:6px">${+c.price > 0 ? esc(c.price) + ' ج.م' : 'مجاني'}</div>`;
+  const R = {
+    hero: () => H.show === false ? '' : `<section class="hero3"><span class="deco d1"></span><span class="deco d2"></span><span class="deco d3"></span>
+  <span class="pill">أكثر من ${Math.max(nc, 1)} دورة مجانية</span><h1>${esc(H.title || '')}</h1><p>${esc(H.subtitle || '')}</p>
   <div class="tcards">${trkCards}</div></section>
-  <div class="row" style="justify-content:center;margin:-6px 0 18px"><a class="btn" href="#/courses">${esc(S.hero_cta || 'تصفّح الكورسات')}</a>${me ? '' : '<a class="btn o" href="#/register">ابدأ مجانًا</a>'}</div>
-  ${(S.tracks || []).length ? `<h2 class="sec">مجالات التعلّم</h2><div class="grid3">${S.tracks.map(t => `<a class="card trk" href="#/courses"><div class="bd"><div class="big">${esc(t.emoji || '📘')}</div><h3>${esc(t.title)}</h3><p class="muted">${esc(t.desc)}</p></div></a>`).join('')}</div>` : ''}
-  <h2 class="sec">التصنيفات</h2><div class="grid">${cats.map(c => `<a class="card" href="#/courses?cat=${c.id}"><div class="bd" style="text-align:center"><div class="big">${c.icon || '📘'}</div><b>${esc(c.name)}</b><span class="muted">${esc(c.description || '')}</span></div></a>`).join('')}</div>
-  <div class="row" style="justify-content:space-between"><h2 class="sec">أحدث الكورسات</h2><a href="#/courses">عرض الكل ←</a></div>
-  <div class="grid">${(feat.data || []).map(c => courseCard(c)).join('') || '<p class="muted">لا توجد كورسات منشورة بعد.</p>'}</div>
-  ${(S.features || []).length ? `<h2 class="sec">ليه تتعلم معنا؟</h2><div class="grid">${S.features.map(f => `<div class="box ft"><div class="big">${esc(f.emoji || '✨')}</div><h3>${esc(f.title)}</h3><p class="muted">${esc(f.desc)}</p></div>`).join('')}</div>` : ''}
-  ${(instr.data || []).length ? `<h2 class="sec">مدرسون متخصصون</h2><div class="grid">${instr.data.map(t => `<a class="card" href="#/instructor/${t.id}"><div class="bd" style="align-items:center;text-align:center">${avatar(t, 72)}<b>${esc(t.full_name)}</b><span class="muted">${esc(t.title || 'مدرس')}</span></div></a>`).join('')}</div>` : ''}
-  ${(tes.data || []).length ? `<h2 class="sec">آراء الطلاب</h2><div class="grid">${tes.data.map(t => `<div class="box"><p>“${esc(t.text)}”</p><div class="row">${avatar(t, 40)}<div><b>${esc(t.name)}</b><div class="muted">${esc(t.role)}</div></div></div></div>`).join('')}</div>` : ''}
-  ${(par.data || []).length ? `<h2 class="sec">شركاؤنا</h2><div class="partners">${par.data.map(p => p.logo_url ? `<img src="${esc(p.logo_url)}" alt="${esc(p.name)}" title="${esc(p.name)}">` : `<span class="tag">${esc(p.name)}</span>`).join('')}</div>` : ''}
-  ${(faq.data || []).length ? `<h2 class="sec">أسئلة شائعة</h2>${faq.data.map(f => `<details class="box fq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}` : ''}
-  <div class="cta"><h2>جاهز تبدأ؟</h2><p>أنشئ حسابك مجانًا وابدأ التعلّم الآن.</p><a class="btn y" href="${me ? '#/courses' : '#/register'}">${me ? 'تصفّح الكورسات' : 'إنشاء حساب'}</a></div>`;
+  <div class="row" style="justify-content:center;margin:-6px 0 18px"><a class="btn" href="#/courses">${esc(H.cta || 'تصفّح الكورسات')}</a>${me ? '' : '<a class="btn o" href="#/register">ابدأ مجانًا</a>'}</div>`,
+    banners: () => { const b = shown(L.banners).filter(x => x.image); return b.length ? `<div class="lp-ban">${b.map(x => { const im = `<img src="${esc(x.image)}" alt="${esc(x.title || '')}" loading="lazy">`; return x.link ? `<a href="${esc(x.link)}">${im}</a>` : im; }).join('')}</div>` : ''; },
+    courses: () => { const m = new Map((crs.data || []).map(c => [c.id, c])); const a = cids.map(id => m.get(id)).filter(Boolean).slice(0, 8); return a.length ? `<div class="row" style="justify-content:space-between"><h2 class="sec">الكورسات المميزة</h2><a href="#/courses">عرض الكل ←</a></div><div class="g4">${a.map(c => courseCard(c, price(c))).join('')}</div>` : ''; },
+    teachers: () => { const m = new Map((tch.data || []).map(t => [t.id, t])); const a = tl.map(x => ({ x, t: m.get(x.id) })).filter(o => o.t).slice(0, 8); return a.length ? `<h2 class="sec">المدرسون المميزون</h2><div class="g4">${a.map(({ x, t }) => `<a class="card" href="#/instructor/${t.id}"><div class="bd" style="align-items:center;text-align:center">${avatar(t, 84)}<b>${esc(t.full_name)}</b><span class="muted">${esc(x.specialty || t.title || 'مدرس')}</span>${(x.bio || t.bio) ? `<p class="muted" style="font-size:.9rem;margin:6px 0 0">${esc(x.bio || t.bio)}</p>` : ''}</div></a>`).join('')}</div>` : ''; },
+    features: () => { const a = shown(L.features).slice(0, 8); return a.length ? `<h2 class="sec">مميزات المنصة</h2><div class="g4">${a.map(f => `<div class="box ft"><div class="big">${esc(f.emoji || '✨')}</div><h3>${esc(f.title)}</h3><p class="muted">${esc(f.desc)}</p></div>`).join('')}</div>` : ''; },
+    reviews: () => { const a = (L.reviews || []).filter(x => x.approved && x.show !== false).slice(0, 8); return a.length ? `<h2 class="sec">آراء الطلاب</h2><div class="g4">${a.map(t => `<div class="box">${+t.rating > 0 ? `<div class="stars">${stars(+t.rating)}</div>` : ''}<p>“${esc(t.text)}”</p><div class="row">${avatar({ avatar_url: t.avatar, full_name: t.name }, 40)}<div><b>${esc(t.name)}</b><div class="muted">${esc(t.role)}</div></div></div></div>`).join('')}</div>` : ''; },
+    faq: () => { const a = shown(L.faqs).slice(0, 6); return a.length ? `<h2 class="sec">الأسئلة الشائعة</h2><div class="g3">${a.map(f => `<details class="box fq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}</div>` : ''; },
+    contact: () => { const C = L.contact || {}, c = S.contact || {}; return C.show === false ? '' : `<h2 class="sec" id="lpc">${esc(C.title || 'تواصل معنا')}</h2><div class="lay2"><div class="box"><p class="muted">${esc(C.text || '')}</p><label>الاسم</label><input id="hn"><label>البريد الإلكتروني</label><input id="he" type="email"><label>الموضوع</label><input id="hs"><label>الرسالة</label><textarea id="hb" rows="4"></textarea><button class="btn" id="hx">إرسال</button></div>
+    <div class="box"><h3>بيانات التواصل</h3>${c.email ? `<p>✉️ ${esc(c.email)}</p>` : ''}${c.phone ? `<p>📞 ${esc(c.phone)}</p>` : ''}${c.whatsapp ? `<p><a href="https://wa.me/${esc(String(c.whatsapp).replace(/\D/g, ''))}" target="_blank" rel="noopener">💬 واتساب</a></p>` : ''}${c.address ? `<p>📍 ${esc(c.address)}</p>` : ''}${c.hours ? `<p>🕘 ${esc(c.hours)}</p>` : ''}</div></div>`; },
+    tracks: () => (H.tracks || []).length ? `<h2 class="sec">مجالات التعلّم</h2><div class="grid3">${H.tracks.map(t => `<a class="card trk" href="#/courses"><div class="bd"><div class="big">${esc(t.emoji || '📘')}</div><h3>${esc(t.title)}</h3><p class="muted">${esc(t.desc)}</p></div></a>`).join('')}</div>` : '',
+    categories: () => `<h2 class="sec">التصنيفات</h2><div class="grid">${cats.map(c => `<a class="card" href="#/courses?cat=${c.id}"><div class="bd" style="text-align:center"><div class="big">${c.icon || '📘'}</div><b>${esc(c.name)}</b><span class="muted">${esc(c.description || '')}</span></div></a>`).join('')}</div>`,
+    partners: () => (par.data || []).length ? `<h2 class="sec">شركاؤنا</h2><div class="partners">${par.data.map(p => p.logo_url ? `<img src="${esc(p.logo_url)}" alt="${esc(p.name)}" title="${esc(p.name)}" loading="lazy">` : `<span class="tag">${esc(p.name)}</span>`).join('')}</div>` : '',
+    cta: () => `<div class="cta"><h2>جاهز تبدأ؟</h2><p>أنشئ حسابك مجانًا وابدأ التعلّم الآن.</p><a class="btn y" href="${me ? '#/courses' : '#/register'}">${me ? 'تصفّح الكورسات' : 'إنشاء حساب'}</a></div>`
+  };
+  app.innerHTML = (prev ? '<div class="box" style="background:#fff7e0;border-color:#f5b800;text-align:center">👁️ معاينة المسودة، الزوار لا يرون هذه التغييرات إلا بعد النشر</div>' : '') + secs.map(k => R[k] ? R[k]() : '').join('');
+  const hx = $('#hx'); if (hx) { if (me) { $('#hn').value = me.full_name || ''; $('#he').value = me.email || ''; } hx.onclick = async () => { if (!$('#hn').value.trim() || !$('#hb').value.trim()) return toast('اكتب الاسم والرسالة'); hx.disabled = true; const { error } = await sb.from('messages').insert({ name: $('#hn').value, email: $('#he').value, subject: $('#hs').value, body: $('#hb').value }); hx.disabled = false; if (error) return toast('تعذر الإرسال، حاول مرة أخرى'); toast('تم إرسال رسالتك ✓'); ['hs', 'hb'].forEach(i => $('#' + i).value = ''); }; }
 }
 async function courses(q) {
   const p = new URLSearchParams(q || ''); const cat = p.get('cat') || '', s = p.get('s') || '', lv = p.get('lv') || '', so = p.get('so') || 'new';
@@ -366,7 +382,7 @@ async function contact() {
   $('#cx').onclick = async () => { if (!$('#cn').value || !$('#cb').value) return toast('اكتب الاسم والرسالة'); const { error } = await sb.from('messages').insert({ name: $('#cn').value, email: $('#ce').value, subject: $('#cs').value, body: $('#cb').value }); if (error) toast('تعذّر الإرسال'); else { toast('تم إرسال رسالتك'); $('#cb').value = ''; $('#cs').value = ''; } };
 }
 async function faqPage() {
-  const { data } = await sb.from('faqs').select('*').order('position');
+  const data = LND && LND.faqs ? LND.faqs.filter(f => f.show !== false) : (await sb.from('faqs').select('*').order('position')).data;
   app.innerHTML = `<h1>الأسئلة الشائعة</h1>${(data || []).map(f => `<details class="box fq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('') || '<p class="muted">لا أسئلة.</p>'}`;
 }
 
@@ -444,7 +460,7 @@ async function route() {
   const [path, q] = (location.hash.slice(1) || '/').split('?'); const p = path.split('/').filter(Boolean);
   window.scrollTo(0, 0);
   try {
-    if (!p.length) return await home();
+    if (!p.length) return await home(q);
     switch (p[0]) {
       case 'courses': return await courses(q);
       case 'course': return await course(p[1]);
