@@ -1,5 +1,5 @@
 body.adm{background:#eef2f9}.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-.side{background:#10213f;color:#cfd8ea;padding:16px;position:sticky;top:0;height:100vh;overflow:auto}.side h2{color:#fff;font-size:1.1rem;margin:0 0 14px}
+.side{background:#0f2a44;color:#cfd8ea;padding:16px;position:sticky;top:0;height:100vh;overflow:auto}.side h2{color:#fff;font-size:1.1rem;margin:0 0 14px}
 .side a{display:block;padding:9px 12px;border-radius:10px;color:#cfd8ea;margin:2px 0;cursor:pointer;font-weight:600}.side a.on,.side a:hover{background:var(--p);color:#fff}
 .cont{padding:22px;min-width:0}.cont h1{margin-top:0}
 .fld{margin-bottom:10px}.fld label{display:block}.imgf{display:flex;gap:10px;align-items:center}.imgf img{height:56px;border-radius:8px;border:1px solid var(--b)}
@@ -12,10 +12,10 @@ body.adm{background:#f6f8fc}.shell{grid-template-columns:260px 1fr;direction:rtl
 .side{background:#fff;color:var(--t);border-left:1px solid var(--b);border-radius:0 0 0 24px;box-shadow:-4px 0 18px rgba(11,31,77,.06);padding:20px 16px}
 .side .sbh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800;font-size:1.2rem;color:var(--p2);padding-bottom:14px;margin-bottom:8px;border-bottom:1px solid var(--b)}.side .sbh small{width:100%;font-weight:600;font-size:.8rem;color:var(--m)}
 .side a{color:var(--t);border-radius:0;border-bottom:1px solid var(--b);padding:11px 12px;font-weight:600;margin:0}
-.side a.on,.side a:hover{background:#eaf1ff;color:var(--p2);border-right:4px solid var(--p);border-radius:6px}
+.side a.on,.side a:hover{background:#e8f0f3;color:var(--p2);border-right:4px solid var(--p);border-radius:6px}
 .mw{min-width:0}.tb{display:flex;align-items:center;gap:16px;background:#fff;padding:12px 24px;box-shadow:0 2px 8px rgba(11,31,77,.06)}.tb .hs2{max-width:340px;flex:1}.tb .bell{font-size:1.3rem;margin-inline-start:auto}.adm-u{font-weight:700;color:var(--p2)}
 .cont{padding:24px 28px}.cont h1{font-size:1.9rem;color:var(--p2)}
 .box,.lrow,.stat,.mgrid .m{border-radius:14px;box-shadow:0 2px 10px rgba(11,31,77,.05)}
-th{background:#eaf1ff;color:var(--p2)}table{border-radius:12px}
+th{background:#e8f0f3;color:var(--p2)}table{border-radius:12px}
 .fld input,.fld select,.fld textarea,.lrow input,.lrow select,.lrow textarea{border-radius:8px;border-color:#cbd5e1}
 @media(max-width:860px){.shell{grid-template-columns:1fr}.side{border-radius:0;box-shadow:none}.side a{border:0}.side .sbh{display:none}.tb .hs2{max-width:none}}

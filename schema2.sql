@@ -68,7 +68,7 @@ grant usage, select on all sequences in schema public to anon, authenticated;
 
 -- default settings (only if empty)
 insert into site_settings(key,value) values ('site', $j${
- "name":"منصة تعلّم","tagline":"تعلّم في أي وقت ومن أي مكان","logo_url":"","primary":"#1b5fd1","accent":"#f5b800",
+ "name":"منصة تعلّم","tagline":"تعلّم في أي وقت ومن أي مكان","logo_url":"","primary":"#24506f","accent":"#f5b800",
  "announcement":"🎉 التسجيل مجاني لكل الكورسات، ابدأ رحلتك اليوم",
  "hero_title":"ارتقِ بمهاراتك وابنِ مستقبلك","hero_subtitle":"كورسات تعليمية في تطوير المهارات وريادة الأعمال والتعليم المدرسي، من مدرسين متخصصين وبشكل مجاني.","hero_image":"","hero_cta":"تصفّح الكورسات",
  "about_title":"عن المنصة","about_text":"منصة تعلّم هي منصة تعليمية إلكترونية تهدف إلى إتاحة تعليم عالي الجودة للجميع. نقدّم دورات في تطوير المهارات الشخصية والمهنية، ودعم رواد الأعمال، والتعليم المدرسي، بإشراف مدرسين متخصصين.","about_image":"",

@@ -12,7 +12,7 @@ const socialIcons = { facebook: '📘', youtube: '▶️', instagram: '📸', tw
 
 function coverHtml(c) {
   if (c.cover_url) return `<div class="cv" style="background-image:url('${esc(c.cover_url)}')"></div>`;
-  const col = c.color || '#1b5fd1';
+  const col = c.color || '#24506f';
   return `<div class="cv" style="background:linear-gradient(135deg,${col},${shade(col, -40)})"><span class="cvi">${c.emoji || catIcon(c.category_id)}</span></div>`;
 }
 async function loadMe() {
@@ -86,13 +86,12 @@ async function home() {
     sb.from('testimonials').select('*').order('position'), sb.from('partners').select('*').order('position'), sb.from('faqs').select('*').order('position').limit(5),
     cnt('courses', ['status', 'published']), cnt('profiles', ['role', 'student']), cnt('profiles', ['role', 'teacher']), cnt('enrollments')]);
   const trk = (S.tracks || []).slice(0, 3);
-  const grads = ['#1e3a8a,#3b82f6', '#0b1f4d,#2563eb', '#172554,#60a5fa'];
+  const grads = ['#153a5c,#3b7f94', '#0c2038,#24607a', '#112f4d,#5b9bad'];
   const trkCards = trk.map((t, i) => `<a class="tcard" href="#/courses" style="${t.image ? `background-image:url('${esc(t.image)}')` : `background:linear-gradient(145deg,${grads[i % 3]})`}"><span class="te">${t.image ? '' : esc(t.emoji || '📘')}</span><span class="ta">↖</span><span class="tl">${esc(t.title)}</span></a>`).join('');
   app.innerHTML = `<section class="hero3"><span class="deco d1"></span><span class="deco d2"></span><span class="deco d3"></span><button class="arr l" aria-label="prev">→</button><button class="arr r" aria-label="next">←</button>
   <span class="pill">أكثر من ${Math.max(nc, 1)} دورة مجانية</span><h1>${esc(S.hero_title || '')}</h1><p>${esc(S.hero_subtitle || '')}</p>
   <div class="tcards">${trkCards}</div></section>
   <div class="row" style="justify-content:center;margin:-6px 0 18px"><a class="btn" href="#/courses">${esc(S.hero_cta || 'تصفّح الكورسات')}</a>${me ? '' : '<a class="btn o" href="#/register">ابدأ مجانًا</a>'}</div>
-  <div class="stats">${[[nc, 'كورس'], [ns, 'طالب'], [nt, 'مدرس'], [ne, 'تسجيل']].map(([n, l]) => `<div class="stat"><b>${n}</b>${l}</div>`).join('')}</div>
   ${(S.tracks || []).length ? `<h2 class="sec">مجالات التعلّم</h2><div class="grid3">${S.tracks.map(t => `<a class="card trk" href="#/courses"><div class="bd"><div class="big">${esc(t.emoji || '📘')}</div><h3>${esc(t.title)}</h3><p class="muted">${esc(t.desc)}</p></div></a>`).join('')}</div>` : ''}
   <h2 class="sec">التصنيفات</h2><div class="grid">${cats.map(c => `<a class="card" href="#/courses?cat=${c.id}"><div class="bd" style="text-align:center"><div class="big">${c.icon || '📘'}</div><b>${esc(c.name)}</b><span class="muted">${esc(c.description || '')}</span></div></a>`).join('')}</div>
   <div class="row" style="justify-content:space-between"><h2 class="sec">أحدث الكورسات</h2><a href="#/courses">عرض الكل ←</a></div>
