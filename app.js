@@ -407,7 +407,7 @@ async function faqPage() {
 
 const MENUS = {
   student: [['#/dashboard', '🏠', 'الرئيسية'], ['#/courses', '📚', 'تصفح الكورسات'], ['#/s/courses', '🎓', 'كورساتي'], ['#/s/lectures', '🎬', 'المحاضرات'], ['#/s/exams', '📝', 'الامتحانات المتاحة'], ['#/s/myexams', '✅', 'امتحاناتي'], ['#/s/results', '📊', 'نتائجي ودرجاتي'], ['#/s/progress', '📈', 'تقدمي الدراسي'], ['#/s/certs', '🏅', 'شهاداتي'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']],
-  teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
+  teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/exams', '📝', 'الامتحانات'], ['#/t/qbank', '🏦', 'بنك الأسئلة'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
 };
 function roleMenu(active) {
   applyRoleRail(active);
@@ -431,6 +431,42 @@ function shellPage(active, inner) {
 }
 const denyPage = () => { app.innerHTML = '<div class="box"><h2>غير مصرح</h2><p>ليس لديك صلاحية الدخول لهذه الصفحة.</p><a class="btn" href="#/">الرئيسية</a></div>'; };
 const pctCls = p => `<div class="bar" style="min-width:110px"><i style="width:${p}%"></i></div>`;
+async function stuExams(kind, rows) {
+  const ids = rows.map(r => r.c.id); const tt = Object.fromEntries(rows.map(r => [r.c.id, r.c.title]));
+  const tbl = (h, b) => `<div class="tw"><table><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>${b || `<tr><td colspan="${h.length}" class="muted" style="text-align:center">لا توجد بيانات</td></tr>`}</table></div>`;
+  const { data: ex } = ids.length ? await sb.from('exams').select('*,exam_questions(question_id)').in('course_id', ids).eq('status', 'published').order('created_at', { ascending: false }) : { data: [] };
+  const { data: at } = await sb.from('exam_attempts').select('*').eq('student_id', me.id).order('started_at', { ascending: false });
+  const by = {}; (at || []).forEach(a => (by[a.exam_id] = by[a.exam_id] || []).push(a));
+  const en = Object.fromEntries((ex || []).map(e => [e.id, e]));
+  const pct = a => a.total ? Math.round(a.score / a.total * 100) : 0;
+  if (kind === 'exams') return `<h1>الامتحانات المتاحة</h1>${tbl(['الامتحان', 'الكورس', 'المدة', 'الأسئلة', 'النجاح', ''], (ex || []).map(e => { const done = (by[e.id] || []).some(a => a.submitted_at); const open = (by[e.id] || []).find(a => !a.submitted_at); return `<tr><td>${esc(e.title)}</td><td>${esc(tt[e.course_id])}</td><td>${e.duration_min} د</td><td>${(e.exam_questions || []).length}</td><td>${e.pass_mark}%</td><td>${done && !e.retake ? '<span class="tag">تم التقديم</span>' : `<a class="btn s" href="#/exam/${e.id}">${open ? 'استكمال' : done ? 'إعادة' : 'ابدأ'}</a>`}</td></tr>`; }).join(''))}`;
+  const sub = (at || []).filter(a => a.submitted_at);
+  if (kind === 'myexams') return `<h1>امتحاناتي</h1>${tbl(['الامتحان', 'المحاولات', 'أفضل نتيجة', 'آخر تسليم'], Object.keys(by).map(id => { const l = by[id].filter(a => a.submitted_at); if (!l.length) return ''; const b = l.reduce((m, a) => pct(a) > pct(m) ? a : m, l[0]); return `<tr><td>${esc((en[id] || {}).title || 'امتحان')}</td><td>${l.length}</td><td>${pct(b)}%</td><td>${new Date(l[0].submitted_at).toLocaleDateString('ar-EG')}</td></tr>`; }).join(''))}`;
+  const { data: all } = sub.length ? await sb.from('exams').select('id,title,course_id').in('id', [...new Set(sub.map(a => a.exam_id))]) : { data: [] };
+  const nm = Object.fromEntries((all || []).map(e => [e.id, e.title]));
+  return `<h1>نتائجي ودرجاتي</h1>${tbl(['الامتحان', 'الدرجة', 'النسبة', 'النتيجة', 'التاريخ'], sub.map(a => `<tr><td>${esc(nm[a.exam_id] || en[a.exam_id]?.title || 'امتحان')}</td><td>${a.score}/${a.total}</td><td>${pct(a)}%</td><td>${a.passed ? '<span class="tag">ناجح</span>' : '<span class="tag y">راسب</span>'}</td><td>${new Date(a.submitted_at).toLocaleDateString('ar-EG')}</td></tr>`).join(''))}`;
+}
+async function examTake(id) {
+  if (needLogin()) return; if (me.role !== 'student') return denyPage();
+  const { data, error } = await sb.rpc('exam_take', { p_exam: id });
+  if (error) { app.innerHTML = `<div class="box"><h2>${esc(error.message)}</h2><a class="btn" href="#/s/exams">رجوع</a></div>`; return; }
+  const skew = Date.now() - new Date(data.now).getTime(); const end = new Date(data.started_at).getTime() + skew + data.duration_min * 60000;
+  const ans = {};
+  app.innerHTML = `<div class="box row" style="position:sticky;top:70px;z-index:5"><h2 style="flex:1;margin:0">${esc(data.title)}</h2><b id="xtm" class="tag y"></b></div>
+  ${data.questions.map((q, i) => `<div class="box"><b>${i + 1}. ${esc(q.body)}</b> <span class="muted">(${q.marks} درجة)</span>${q.options.map((o, k) => `<label class="row" style="font-weight:400;margin-top:8px"><input type="radio" name="q${i}" data-q="${q.id}" value="${k}" style="width:auto;margin:0 0 0 8px">${esc(o)}</label>`).join('')}</div>`).join('') || '<div class="box">لا توجد أسئلة في هذا الامتحان.</div>'}
+  <button class="btn big2" id="xsub">تسليم الإجابات</button>`;
+  let done = false;
+  const submit = async auto => {
+    if (done) return; if (!auto && !confirm('تسليم الامتحان الآن؟')) return; done = true; clearInterval(tm);
+    $$('input[data-q]:checked').forEach(r => ans[r.dataset.q] = +r.value);
+    const { data: r, error: e2 } = await sb.rpc('exam_submit', { p_attempt: data.attempt_id, p_answers: ans });
+    if (e2) { done = false; return toast(e2.message); }
+    app.innerHTML = `<div class="box" style="text-align:center"><h1>${r.passed ? '🎉 ناجح' : 'للأسف لم تنجح'}</h1><h2>${r.score} من ${r.total}</h2><p class="muted">${r.total ? Math.round(r.score / r.total * 100) : 0}% (درجة النجاح ${data.pass_mark}%)</p><a class="btn" href="#/s/results">نتائجي</a></div>`;
+  };
+  const tick = () => { const left = Math.max(0, Math.floor((end - Date.now()) / 1000)); const m = $('#xtm'); if (m) m.textContent = '⏱ ' + String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0'); if (left <= 0) submit(true); };
+  const tm = setInterval(() => { if (!$('#xtm')) return clearInterval(tm); tick(); }, 1000); tick();
+  $('#xsub').onclick = () => submit(false);
+}
 async function stuData() {
   const { data: en } = await sb.from('enrollments').select('course_id,created_at,courses(id,title,emoji,color,cover_url)').eq('student_id', me.id);
   const rows = []; for (const e of en || []) rows.push({ c: e.courses, pg: await progress(e.course_id, me.id), at: e.created_at });
@@ -450,6 +486,7 @@ async function sPage(kind) {
   if (kind === 'results') html = `<h1>نتائجي ودرجاتي</h1>${tbl(['الكورس', 'الدرجة', 'النسبة', 'النتيجة', 'التاريخ'], at.map(a => { const p = a.total ? Math.round(a.score / a.total * 100) : 0; return `<tr><td>${esc(tt[a.course_id] || '')}</td><td>${a.score}/${a.total}</td><td>${p}%</td><td>${p >= 60 ? '✅ ناجح' : '❌ لم تنجح'}</td><td>${fmtDate(a.created_at)}</td></tr>`; }).join(''))}`;
   if (kind === 'progress') html = `<h1>تقدمي الدراسي</h1>${tbl(['الكورس', 'المنجز', 'التقدم', ''], rows.map(({ c, pg }) => `<tr><td>${esc(c.title)}</td><td>${pg.done}/${pg.total}</td><td>${pctCls(pg.pct)} ${pg.pct}%</td><td><a class="btn s o" href="#/learn/${c.id}">متابعة</a></td></tr>`).join(''))}`;
   if (kind === 'certs') { const f = rows.filter(r => r.pg.pct === 100 && r.pg.total); html = `<h1>شهاداتي</h1>${f.length ? f.map(({ c }) => `<div class="box row"><b style="flex:1">🏅 ${esc(c.title)}</b><a class="btn" href="#/cert/${c.id}">عرض الشهادة</a></div>`).join('') : '<p class="muted">أكمل كل دروس كورس لتحصل على شهادتك.</p>'}`; }
+  if (kind === 'exams' || kind === 'myexams' || kind === 'results') html = await stuExams(kind, rows) + (kind === 'results' ? html.replace('<h1>نتائجي ودرجاتي</h1>', '<h2 style="margin-top:26px">اختبارات الكورسات السريعة</h2>') : '');
   shellPage(hrefs[kind], html);
 }
 async function tData() {
@@ -473,7 +510,8 @@ async function tPage(kind) {
   if (kind === 'lectures') html = `<h1>إدارة المحاضرات</h1><p class="muted">من هنا تدير محاضرات كل كورساتك. الرفع (فيديو، صورة، ملف) يتم من صفحة تعديل الكورس.</p>${tbl(['المحاضرة', 'الكورس', 'المحتوى', 'الحالة', ''], d.ls.map(l => `<tr><td>${esc(l.title)}</td><td>${esc(d.title[l.course_id])}</td><td>${l.video_url ? '🎬 ' : ''}${l.image_url ? '🖼️ ' : ''}${l.file_url ? '📎' : ''}</td><td>${l.approved ? 'معتمد' : '⏳ بانتظار الموافقة'}</td><td><a class="btn s" href="#/edit/${l.course_id}">تعديل</a></td></tr>`).join(''))}`;
   if (kind === 'students') { const by = {}; d.en.forEach(e => (by[e.student_id] = by[e.student_id] || []).push(e.course_id)); html = `<h1>إدارة الطلاب</h1>${tbl(['الطالب', 'الكورسات', 'متوسط التقدم'], Object.entries(by).map(([sid, cl]) => `<tr><td>${esc(d.name[sid] || '')}</td><td>${cl.map(c => esc(d.title[c])).join('، ')}</td><td>${Math.round(cl.reduce((s, c) => s + d.pct(sid, c), 0) / cl.length)}%</td></tr>`).join(''))}`; }
   if (kind === 'progress') html = `<h1>متابعة تقدم الطلاب</h1>${tbl(['الطالب', 'الكورس', 'التقدم'], d.en.map(e => { const p = d.pct(e.student_id, e.course_id); return `<tr><td>${esc(d.name[e.student_id] || '')}</td><td>${esc(d.title[e.course_id])}</td><td>${pctCls(p)} ${p}%</td></tr>`; }).join(''))}`;
-  if (kind === 'results') html = `<h1>نتائج الطلاب</h1>${tbl(['الطالب', 'الكورس', 'الدرجة', 'النسبة', 'التاريخ'], d.at.map(a => { const p = a.total ? Math.round(a.score / a.total * 100) : 0; return `<tr><td>${esc(d.name[a.student_id] || '')}</td><td>${esc(d.title[a.course_id])}</td><td>${a.score}/${a.total}</td><td>${p}%</td><td>${fmtDate(a.created_at)}</td></tr>`; }).join(''))}`;
+  if (kind === 'exams' || kind === 'qbank' || kind === 'results') { shellPage('#/t/' + kind, '<div id="exr"></div>'); return examsStaff($('#exr'), kind, ['exams', 'qbank', 'results']); }
+  if (kind === 'results_old') html = `<h1>نتائج الطلاب</h1>${tbl(['الطالب', 'الكورس', 'الدرجة', 'النسبة', 'التاريخ'], d.at.map(a => { const p = a.total ? Math.round(a.score / a.total * 100) : 0; return `<tr><td>${esc(d.name[a.student_id] || '')}</td><td>${esc(d.title[a.course_id])}</td><td>${a.score}/${a.total}</td><td>${p}%</td><td>${fmtDate(a.created_at)}</td></tr>`; }).join(''))}`;
   if (!html) return teacherDash();
   shellPage(act, html);
 }
@@ -488,6 +526,7 @@ async function route() {
       case 'course': return await course(p[1]);
       case 'learn': return await learn(p[1], p[2]);
       case 'quiz': return await quiz(p[1]);
+      case 'exam': return await examTake(p[1]);
       case 'cert': return await cert(p[1]);
       case 'edit': return await edit(p[1]);
       case 's': return await sPage(p[1]);
