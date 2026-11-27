@@ -5,7 +5,9 @@ const toast = m => { const d = document.createElement('div'); d.className = 'toa
 const roleAr = { student: 'طالب', teacher: 'مدرس', admin: 'أدمن' };
 const stAr = { draft: 'مسودة', pending: 'بانتظار الموافقة', published: 'منشور' };
 const fmtDate = d => new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-const emb = u => { if (!u) return ''; const m = u.match(/(?:youtu\.be\/|v=|embed\/)([\w-]{11})/); return m ? 'https://www.youtube.com/embed/' + m[1] : u; };
+const ytId = u => { const m = String(u || '').trim().match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#\s]*&)?v=|embed\/|shorts\/|live\/|v\/)|[?&]v=)([\w-]{11})/); return m ? m[1] : null; };
+const emb = u => { u = String(u || '').trim(); if (!u) return ''; const id = ytId(u); if (id) return 'https://www.youtube.com/embed/' + id + '?rel=0'; const v = u.match(/vimeo\.com\/(?:video\/)?(\d+)/); return v ? 'https://player.vimeo.com/video/' + v[1] : u; };
+const vidHtml = u => { u = String(u || '').trim(); if (!u) return ''; if (/\.(mp4|webm|ogg)(\?|$)/i.test(u)) return `<video class="vid" src="${esc(u)}" controls></video>`; const id = ytId(u); return `<iframe class="vid" src="${esc(emb(u))}" title="video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe><p class="muted"><a href="${id ? 'https://www.youtube.com/watch?v=' + id : esc(u)}" target="_blank" rel="noopener">▶ افتح الفيديو في نافذة جديدة</a></p>`; };
 let S = {}; // site settings
 async function loadSettings() {
   try { const { data } = await sb.from('site_settings').select('value').eq('key', 'site').single(); S = (data && data.value) || {}; } catch (e) { S = {}; }

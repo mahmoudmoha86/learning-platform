@@ -89,8 +89,8 @@ async function home() {
     cnt('courses', ['status', 'published']), cnt('profiles', ['role', 'student']), cnt('profiles', ['role', 'teacher']), cnt('enrollments')]);
   const trk = (S.tracks || []).slice(0, 3);
   const grads = ['#8c0000,#e30000', '#6e0000,#c90000', '#a00000,#f04040'];
-  const trkCards = trk.map((t, i) => `<a class="tcard" href="#/courses" style="${t.image ? `background-image:url('${esc(t.image)}')` : `background:linear-gradient(145deg,${grads[i % 3]})`}"><span class="te">${t.image ? '' : esc(t.emoji || '📘')}</span><span class="ta">↖</span><span class="tl">${esc(t.title)}</span></a>`).join('');
-  app.innerHTML = `<section class="hero3"><span class="deco d1"></span><span class="deco d2"></span><span class="deco d3"></span><button class="arr l" aria-label="prev">→</button><button class="arr r" aria-label="next">←</button>
+  const trkCards = trk.map((t, i) => `<a class="tcard${t.image ? ' img' : ''}" href="#/courses" style="${t.image ? `background-image:url('${esc(t.image)}')` : `background:linear-gradient(145deg,${grads[i % 3]})`}"><span class="te">${t.image ? '' : esc(t.emoji || '📘')}</span><span class="ta">↖</span><span class="tl">${esc(t.title)}</span></a>`).join('');
+  app.innerHTML = `<section class="hero3"><span class="deco d1"></span><span class="deco d2"></span><span class="deco d3"></span>
   <span class="pill">أكثر من ${Math.max(nc, 1)} دورة مجانية</span><h1>${esc(S.hero_title || '')}</h1><p>${esc(S.hero_subtitle || '')}</p>
   <div class="tcards">${trkCards}</div></section>
   <div class="row" style="justify-content:center;margin:-6px 0 18px"><a class="btn" href="#/courses">${esc(S.hero_cta || 'تصفّح الكورسات')}</a>${me ? '' : '<a class="btn o" href="#/register">ابدأ مجانًا</a>'}</div>
@@ -123,7 +123,7 @@ async function course(id) {
   const { data: c } = await sb.from('courses').select('*,profiles!teacher_id(id,full_name,bio,title,avatar_url)').eq('id', id).single();
   if (!c) { app.innerHTML = '<p>الكورس غير موجود.</p>'; return; }
   const [{ data: ls }, { data: rv }, { data: rel }] = await Promise.all([
-    sb.from('lessons').select('id,title,position').eq('course_id', id).order('position'),
+    sb.from('lessons').select('id,title,position,video_url').eq('course_id', id).order('position'),
     sb.from('reviews').select('*,profiles(full_name,avatar_url)').eq('course_id', id).order('created_at', { ascending: false }),
     sb.from('courses').select(CSEL).eq('status', 'published').eq('category_id', c.category_id || 0).neq('id', id).limit(3)]);
   let enr = false, mine = null;
@@ -135,6 +135,7 @@ async function course(id) {
   <p class="muted">المدرس: ${c.profiles ? `<a href="#/instructor/${c.profiles.id}">${esc(c.profiles.full_name)}</a>` : esc(c.instructor_name || 'فريق المنصة')}</p>
   ${enr ? `<a class="btn" href="#/learn/${id}">تابع التعلّم</a>` : `<button class="btn y" id="en">سجّل في الكورس مجانًا</button>`}</div></div>
   ${c.outcomes ? `<div class="box"><h3>ماذا ستتعلم؟</h3><ul class="chk">${c.outcomes.split('\n').filter(Boolean).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+  ${(() => { const pv = (ls || []).find(l => l.video_url); return pv ? `<div class="box"><h3>معاينة الكورس</h3>${vidHtml(pv.video_url)}</div>` : ''; })()}
   <div class="box"><h3>محتوى الكورس (${(ls || []).length} درس)</h3>${(ls || []).map((l, i) => `<div class="ls">${i + 1}. ${esc(l.title)}</div>`).join('') || '<p class="muted">لا دروس بعد.</p>'}</div>
   ${c.profiles ? `<div class="box row">${avatar(c.profiles, 64)}<div><b>${esc(c.profiles.full_name)}</b><div class="muted">${esc(c.profiles.title || 'مدرس')}</div><p>${esc(c.profiles.bio || '')}</p></div></div>` : ''}
   <div class="box"><h3>التقييمات</h3>
@@ -168,7 +169,7 @@ async function learn(id, lid) {
   app.innerHTML = `<div class="row" style="justify-content:space-between"><h2>${esc(c.title)}</h2><a class="btn o s" href="#/course/${id}">صفحة الكورس</a></div><div class="lay"><div class="box" style="padding:0"><div style="padding:12px"><div class="bar"><i style="width:${pg.pct}%"></i></div><div class="muted">${pg.pct}% مكتمل (${pg.done}/${pg.total})</div></div>
   ${(ls || []).map((l, i) => `<div class="ls ${cur && l.id === cur.id ? 'on' : ''}" data-id="${l.id}">${done.has(l.id) ? '✅' : '⭕'} ${i + 1}. ${esc(l.title)}</div>`).join('')}
   <div style="padding:12px;display:grid;gap:8px">${nq ? `<a class="btn s y" href="#/quiz/${id}">📝 اختبار الكورس</a>` : ''}${pg.pct === 100 && pg.total ? `<a class="btn s" href="#/cert/${id}">🏅 شهادة الإتمام</a>` : ''}</div></div>
-  <div class="box">${cur ? `<h3>${esc(cur.title)}</h3>${cur.video_url ? `<iframe class="vid" src="${esc(emb(cur.video_url))}" allowfullscreen></iframe>` : ''}<p style="white-space:pre-wrap">${esc(cur.content)}</p>
+  <div class="box">${cur ? `<h3>${esc(cur.title)}</h3>${vidHtml(cur.video_url)}<p style="white-space:pre-wrap">${esc(cur.content)}</p>
   <div class="row"><button class="btn ${done.has(cur.id) ? 'o' : ''}" id="dn">${done.has(cur.id) ? 'إلغاء الإكمال' : 'تم إكمال الدرس ✓'}</button>
   ${idx > 0 ? `<a class="btn o" href="#/learn/${id}/${ls[idx - 1].id}">السابق</a>` : ''}${idx < ls.length - 1 ? `<a class="btn o" href="#/learn/${id}/${ls[idx + 1].id}">التالي</a>` : ''}</div>` : '<p class="muted">لا دروس بعد.</p>'}</div></div>`;
   $$('.ls[data-id]').forEach(e => e.onclick = () => location.hash = `#/learn/${id}/${e.dataset.id}`);
