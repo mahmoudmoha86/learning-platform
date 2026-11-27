@@ -59,7 +59,7 @@ function dtable(cfg) {
     let rows = (cfg.rows || []).filter(r => (!st.q || String(cfg.search(r)).toLowerCase().includes(st.q)) && (cfg.filters || []).every((f, i) => !st.f[i] || f.f(r, st.f[i])));
     if (st.sc >= 0) { const g = cfg.cols[st.sc].s || (() => ''); rows = [...rows].sort((a, b) => { const x = g(a), y = g(b); return (x > y ? 1 : x < y ? -1 : 0) * st.dir; }); }
     box.querySelector('#dc').textContent = `(${rows.length})`;
-    box.querySelector('#dbd').innerHTML = rows.map((r, ri) => `<tr>${cfg.cols.map(c => `<td>${c.v(r)}</td>`).join('')}${cfg.actions ? `<td style="white-space:nowrap">${cfg.actions(r).map(([a, l, cl]) => `<button class="btn s ${cl || 'o'}" data-a="${a}" data-i="${ri}">${l}</button>`).join(' ')}</td>` : ''}</tr>`).join('') || `<tr><td colspan="${cfg.cols.length + 1}" class="muted" style="text-align:center">لا توجد نتائج</td></tr>`;
+    box.querySelector('#dbd').innerHTML = rows.map((r, ri) => `<tr>${cfg.cols.map(c => `<td>${c.v(r)}</td>`).join('')}${cfg.actions ? `<td style="min-width:150px"><div class="row" style="gap:4px">${cfg.actions(r).map(([a, l, cl]) => `<button class="btn s ${cl || 'o'}" data-a="${a}" data-i="${ri}">${l}</button>`).join(' ')}</div></td>` : ''}</tr>`).join('') || `<tr><td colspan="${cfg.cols.length + 1}" class="muted" style="text-align:center">لا توجد نتائج</td></tr>`;
     box.querySelectorAll('th[data-s] i').forEach((el, i) => el.textContent = i === st.sc ? (st.dir > 0 ? '▲' : '▼') : '');
     box.querySelectorAll('#dbd [data-a]').forEach(b => b.onclick = () => cfg.onAct(b.dataset.a, rows[+b.dataset.i]));
   };
