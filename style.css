@@ -151,3 +151,4 @@ header .auth .btn:not(.g):not(.o):not(.s){background:#7a1424;box-shadow:0 4px 12
 .lcf .lcb{width:100%;border-radius:999px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700}
 
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}@media(max-width:700px){.cgrid{grid-template-columns:1fr}}
+.box.row select{min-width:150px;flex:1 1 150px!important}.box.row input#s{flex:2 1 220px!important}
