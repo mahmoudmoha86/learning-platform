@@ -31,7 +31,7 @@ function header() {
   document.onclick = () => { const m = $('#ddm'); if (m) m.classList.remove('open'); };
   $('#hs2').onsubmit = e => { e.preventDefault(); location.hash = `#/courses?s=${encodeURIComponent($('#hq2').value)}`; };
   quick();
-  const o = $('#out'); if (o) o.onclick = async () => { await sb.auth.signOut(); location.hash = '#/'; await loadMe(); route(); };
+  const o = $('#out'); if (o) o.onclick = async () => { await sb.auth.signOut(); me = null; location.hash = '#/login'; await loadMe(); route(); };
 }
 const IC = {
   grid: '<rect x="3" y="3" width="7" height="8" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="15" width="7" height="6" rx="2"/>',
@@ -267,7 +267,7 @@ async function profilePage() {
 }
 async function dashboard() {
   if (needLogin()) return;
-  if (me.role !== 'student') return teacherDash();
+  if (me.role !== 'student') return tPage('home');
   const { data } = await sb.from('enrollments').select('course_id,courses(*,profiles!teacher_id(full_name))').eq('student_id', me.id);
   const rows = []; for (const e of data || []) rows.push({ c: e.courses, pg: await progress(e.course_id, me.id) });
   const { data: at } = await sb.from('quiz_attempts').select('score,total').eq('student_id', me.id);
@@ -281,10 +281,7 @@ async function dashboard() {
   const grid = (arr, f) => `<div class="grid">${arr.map(f).join('')}</div>`;
   const prog = ({ c, pg }) => courseCard(c, `<div class="bar"><i style="width:${pg.pct}%"></i></div><span class="muted">${pg.pct}%</span>${pg.pct === 100 && pg.total ? `<a href="#/cert/${c.id}">🏅 الشهادة</a>` : ''}`, `#/learn/${c.id}`).replace('التفاصيل', 'تابع');
   const tr = (S.tracks || []).slice(0, 3);
-  app.innerHTML = `<div class="dl"><aside class="sb"><div class="sbh">🎓 ${esc(S.name || 'منصة تعلّم')}</div>
-  <div class="sbg"><b>▦ لوحتي التعليمية</b><a href="#dcur" class="on">الدورات الحالية</a><a href="#dfin">الدورات المنتهية</a><a href="#dper">أدائي</a><a href="#dcer">شهاداتي</a></div>
-  ${tr.map(t => `<a class="sbl" href="#/courses">${esc(t.emoji || '📘')} ${esc(t.title)}</a>`).join('')}
-  <a class="sbl" href="#/courses">📚 تصفح جميع الدورات</a><a class="sbl" href="#dsug">✨ المقترح لي</a><a class="sbl" href="#/profile">👤 حسابي</a></aside>
+  app.innerHTML = `<div class="dl">${roleMenu('#/dashboard')}
   <div class="dm"><h1>أهلاً ${esc(me.full_name)} 👋</h1><div class="stats"><div class="stat"><b>${rows.length}</b>كورسات مسجّل بها</div><div class="stat"><b>${fin.length}</b>كورسات مكتملة</div><div class="stat"><b>${aq}%</b>متوسط الاختبارات</div></div>
   <section id="dcur"><h2>الدورات الحالية</h2>${cur.length ? grid(cur, prog) : '<p class="muted">لا توجد لديك دورات حالية</p>' + empty('', 'تصفح تعليمي'.replace('تعليمي', 'الدورات'))}</section>
   <section id="dfin"><h2>الدورات المنتهية</h2>${fin.length ? grid(fin, prog) : '<p class="muted">لا توجد دورات منتهية بعد</p>'}</section>
@@ -303,9 +300,10 @@ async function teacherDash(tid) {
   const { data: ul } = ids.length ? await sb.from('lessons').select('course_id').eq('approved', false).in('course_id', ids) : { data: [] };
   const { data: uq } = ids.length ? await sb.from('quiz_questions').select('course_id').eq('approved', false).in('course_id', ids) : { data: [] };
   const up = {}; [...(ul || []), ...(uq || [])].forEach(x => up[x.course_id] = (up[x.course_id] || 0) + 1);
-  app.innerHTML = `${tid ? '<div class="box" style="background:#fff4e5">👁️ أنت تشاهد صفحة المدرس كأدمن ويمكنك التعديل فيها. <a href="admin.html#teachers">رجوع لقائمة المدرسين</a></div>' : ''}<div class="row"><h1 style="flex:1">${tid ? 'صفحة المدرس: ' + esc(tp?.full_name) : 'لوحة المدرس'}</h1>${me.role === 'admin' || me.role === 'supervisor' ? '<a class="btn o" href="admin.html">لوحة الإدارة</a>' : ''}<button class="btn y" id="new">+ كورس جديد</button></div>
+  const html = `${tid ? '<div class="box" style="background:#fff4e5">👁️ أنت تشاهد صفحة المدرس كأدمن ويمكنك التعديل فيها. <a href="admin.html#teachers">رجوع لقائمة المدرسين</a></div>' : ''}<div class="row"><h1 style="flex:1">${tid ? 'صفحة المدرس: ' + esc(tp?.full_name) : 'لوحة المدرس'}</h1>${me.role === 'admin' || me.role === 'supervisor' ? '<a class="btn o" href="admin.html">لوحة الإدارة</a>' : ''}<button class="btn y" id="new">+ كورس جديد</button></div>
   <div class="stats"><div class="stat"><b>${(data || []).length}</b>الكورسات</div><div class="stat"><b>${(en || []).length}</b>إجمالي المسجلين</div><div class="stat"><b>${(data || []).filter(c => c.status === 'published').length}</b>منشور</div></div>
   <div class="tw"><table><tr><th>الكورس</th><th>الحالة</th><th>الطلاب</th><th>بانتظار الموافقة</th><th></th></tr>${(data || []).map(c => `<tr><td>${esc(c.title)}</td><td>${stAr[c.status]}</td><td>${n[c.id] || 0}</td><td>${up[c.id] ? '⏳ ' + up[c.id] + ' عنصر' : '-'}</td><td><a class="btn s" href="#/edit/${c.id}">تعديل</a></td></tr>`).join('')}</table></div>`;
+  if (tid) app.innerHTML = html; else shellPage('#/t/courses', html);
   $('#new').onclick = async () => { const { data: c, error } = await sb.from('courses').insert({ title: 'كورس جديد', teacher_id: tid || me.id }).select().single(); if (error) toast(error.message); else location.hash = `#/edit/${c.id}`; };
 }
 async function edit(id) {
@@ -370,6 +368,68 @@ async function faqPage() {
   const { data } = await sb.from('faqs').select('*').order('position');
   app.innerHTML = `<h1>الأسئلة الشائعة</h1>${(data || []).map(f => `<details class="box fq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('') || '<p class="muted">لا أسئلة.</p>'}`;
 }
+
+const MENUS = {
+  student: [['#/dashboard', '🏠', 'الرئيسية'], ['#/courses', '📚', 'تصفح الكورسات'], ['#/s/courses', '🎓', 'كورساتي'], ['#/s/lectures', '🎬', 'المحاضرات'], ['#/s/exams', '📝', 'الامتحانات المتاحة'], ['#/s/myexams', '✅', 'امتحاناتي'], ['#/s/results', '📊', 'نتائجي ودرجاتي'], ['#/s/progress', '📈', 'تقدمي الدراسي'], ['#/s/certs', '🏅', 'شهاداتي'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']],
+  teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
+};
+function roleMenu(active) {
+  const items = MENUS[me.role === 'student' ? 'student' : 'teacher'];
+  return `<aside class="sb"><div class="sbh">🎓 ${esc(S.name || 'منصة تعلّم')}</div><div class="muted" style="margin:-8px 0 10px">${roleAr[me.role] || ''}</div>${items.map(([h, i, l]) => `<a class="sbl ${h === active ? 'on' : ''}" href="${h}">${i} ${l}</a>`).join('')}${me.role === 'admin' || me.role === 'supervisor' ? '<a class="sbl" href="admin.html">🛡️ لوحة الإدارة</a>' : ''}<a class="sbl" href="#/login" id="lo2">🚪 تسجيل الخروج</a></aside>`;
+}
+function shellPage(active, inner) {
+  if (needLogin()) return;
+  app.innerHTML = `<div class="dl">${roleMenu(active)}<div class="dm">${inner}</div></div>`;
+  const o = $('#lo2'); if (o) o.onclick = async e => { e.preventDefault(); await sb.auth.signOut(); me = null; location.hash = '#/login'; header(); route(); };
+}
+const denyPage = () => { app.innerHTML = '<div class="box"><h2>غير مصرح</h2><p>ليس لديك صلاحية الدخول لهذه الصفحة.</p><a class="btn" href="#/">الرئيسية</a></div>'; };
+const pctCls = p => `<div class="bar" style="min-width:110px"><i style="width:${p}%"></i></div>`;
+async function stuData() {
+  const { data: en } = await sb.from('enrollments').select('course_id,created_at,courses(id,title,emoji,color,cover_url)').eq('student_id', me.id);
+  const rows = []; for (const e of en || []) rows.push({ c: e.courses, pg: await progress(e.course_id, me.id), at: e.created_at });
+  const { data: at } = await sb.from('quiz_attempts').select('*').eq('student_id', me.id).order('created_at', { ascending: false });
+  return { rows, at: at || [] };
+}
+async function sPage(kind) {
+  if (needLogin()) return; if (me.role !== 'student') return denyPage();
+  const { rows, at } = await stuData(); const tt = Object.fromEntries(rows.map(r => [r.c.id, r.c.title]));
+  const tbl = (h, b) => `<div class="tw"><table><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>${b || `<tr><td colspan="${h.length}" class="muted" style="text-align:center">لا توجد بيانات</td></tr>`}</table></div>`;
+  const hrefs = { courses: '#/s/courses', lectures: '#/s/lectures', exams: '#/s/exams', myexams: '#/s/myexams', results: '#/s/results', progress: '#/s/progress', certs: '#/s/certs' };
+  let html = '';
+  if (kind === 'courses') html = `<h1>كورساتي</h1>${rows.length ? `<div class="grid">${rows.map(({ c, pg }) => courseCard(c, `<div class="bar"><i style="width:${pg.pct}%"></i></div><span class="muted">${pg.pct}%</span>`, `#/learn/${c.id}`).replace('التفاصيل', 'تابع')).join('')}</div>` : '<p class="muted">لم تسجّل في أي كورس بعد.</p><a class="btn" href="#/courses">تصفح الكورسات</a>'}`;
+  if (kind === 'lectures') { const out = []; for (const r of rows) { const { data: ls } = await sb.from('lessons').select('id,title,position').eq('course_id', r.c.id).order('position'); out.push(`<div class="box"><h3>${esc(r.c.title)}</h3>${(ls || []).map((l, i) => `<div class="ls"><span style="flex:1">${r.pg.set.has(l.id) ? '✅' : '⭕'} ${i + 1}. ${esc(l.title)}</span><a class="btn s o" href="#/learn/${r.c.id}/${l.id}">مشاهدة</a></div>`).join('') || '<p class="muted">لا محاضرات بعد</p>'}</div>`); } html = `<h1>المحاضرات</h1>${out.join('') || '<p class="muted">سجّل في كورس لتظهر محاضراته هنا.</p>'}`; }
+  if (kind === 'exams') { const out = []; for (const r of rows) { const { count } = await sb.from('quiz_questions').select('*', { count: 'exact', head: true }).eq('course_id', r.c.id); if (count) out.push(`<tr><td>${esc(r.c.title)}</td><td>${count}</td><td>${at.filter(a => a.course_id === r.c.id).length}</td><td><a class="btn s" href="#/quiz/${r.c.id}">ابدأ الاختبار</a></td></tr>`); } html = `<h1>الامتحانات المتاحة</h1>${tbl(['الكورس', 'عدد الأسئلة', 'محاولاتك', ''], out.join(''))}`; }
+  if (kind === 'myexams') { const by = {}; at.forEach(a => { (by[a.course_id] = by[a.course_id] || []).push(a); }); html = `<h1>امتحاناتي</h1>${tbl(['الكورس', 'عدد المحاولات', 'أفضل نتيجة', 'آخر محاولة'], Object.entries(by).map(([k, v]) => `<tr><td>${esc(tt[k] || '')}</td><td>${v.length}</td><td>${Math.max(...v.map(a => Math.round(a.score / a.total * 100)))}%</td><td>${fmtDate(v[0].created_at)}</td></tr>`).join(''))}`; }
+  if (kind === 'results') html = `<h1>نتائجي ودرجاتي</h1>${tbl(['الكورس', 'الدرجة', 'النسبة', 'النتيجة', 'التاريخ'], at.map(a => { const p = a.total ? Math.round(a.score / a.total * 100) : 0; return `<tr><td>${esc(tt[a.course_id] || '')}</td><td>${a.score}/${a.total}</td><td>${p}%</td><td>${p >= 60 ? '✅ ناجح' : '❌ لم تنجح'}</td><td>${fmtDate(a.created_at)}</td></tr>`; }).join(''))}`;
+  if (kind === 'progress') html = `<h1>تقدمي الدراسي</h1>${tbl(['الكورس', 'المنجز', 'التقدم', ''], rows.map(({ c, pg }) => `<tr><td>${esc(c.title)}</td><td>${pg.done}/${pg.total}</td><td>${pctCls(pg.pct)} ${pg.pct}%</td><td><a class="btn s o" href="#/learn/${c.id}">متابعة</a></td></tr>`).join(''))}`;
+  if (kind === 'certs') { const f = rows.filter(r => r.pg.pct === 100 && r.pg.total); html = `<h1>شهاداتي</h1>${f.length ? f.map(({ c }) => `<div class="box row"><b style="flex:1">🏅 ${esc(c.title)}</b><a class="btn" href="#/cert/${c.id}">عرض الشهادة</a></div>`).join('') : '<p class="muted">أكمل كل دروس كورس لتحصل على شهادتك.</p>'}`; }
+  shellPage(hrefs[kind], html);
+}
+async function tData() {
+  if (me.role === 'student') return null;
+  const q = sb.from('courses').select('id,title,status,teacher_id').order('created_at', { ascending: false }); if (me.role === 'teacher') q.eq('teacher_id', me.id);
+  const { data: cs } = await q; const ids = (cs || []).map(c => c.id); const none = { data: [] };
+  const [{ data: en }, { data: ls }, { data: at }] = await Promise.all([ids.length ? sb.from('enrollments').select('student_id,course_id,created_at').in('course_id', ids) : none, ids.length ? sb.from('lessons').select('id,title,position,approved,video_url,image_url,file_url,course_id').in('course_id', ids).order('position') : none, ids.length ? sb.from('quiz_attempts').select('*').in('course_id', ids).order('created_at', { ascending: false }) : none]);
+  const sids = [...new Set((en || []).map(e => e.student_id))];
+  const { data: ps } = sids.length ? await sb.from('profiles').select('id,full_name').in('id', sids) : none;
+  const { data: pr } = sids.length && (ls || []).length ? await sb.from('lesson_progress').select('student_id,lesson_id').in('student_id', sids).in('lesson_id', ls.map(l => l.id)) : none;
+  const name = Object.fromEntries((ps || []).map(p => [p.id, p.full_name]));
+  const lc = {}; (ls || []).filter(l => l.approved).forEach(l => (lc[l.course_id] = lc[l.course_id] || []).push(l.id));
+  const pct = (sid, cid) => { const all = lc[cid] || []; if (!all.length) return 0; const d = new Set((pr || []).filter(p => p.student_id === sid).map(p => p.lesson_id)); return Math.round(all.filter(x => d.has(x)).length / all.length * 100); };
+  return { cs: cs || [], en: en || [], ls: ls || [], at: at || [], name, pct, title: Object.fromEntries((cs || []).map(c => [c.id, c.title])) };
+}
+async function tPage(kind) {
+  if (needLogin()) return; if (me.role === 'student') return denyPage();
+  const d = await tData(); const tbl = (h, b) => `<div class="tw"><table><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>${b || `<tr><td colspan="${h.length}" class="muted" style="text-align:center">لا توجد بيانات</td></tr>`}</table></div>`;
+  let html = '', act = '#/t/' + kind;
+  if (kind === 'home') { act = '#/dashboard'; const pend = d.ls.filter(l => !l.approved).length; html = `<h1>لوحة التحكم</h1><div class="stats"><div class="stat"><b>${d.cs.length}</b>كورساتي</div><div class="stat"><b>${d.ls.length}</b>المحاضرات</div><div class="stat"><b>${new Set(d.en.map(e => e.student_id)).size}</b>الطلاب</div><div class="stat"><b>${pend}</b>بانتظار الموافقة</div></div><h2>آخر التسجيلات</h2>${tbl(['الطالب', 'الكورس', 'التاريخ'], d.en.slice().sort((a, b) => b.created_at > a.created_at ? 1 : -1).slice(0, 8).map(e => `<tr><td>${esc(d.name[e.student_id] || '')}</td><td>${esc(d.title[e.course_id])}</td><td>${fmtDate(e.created_at)}</td></tr>`).join(''))}`; }
+  if (kind === 'lectures') html = `<h1>إدارة المحاضرات</h1><p class="muted">من هنا تدير محاضرات كل كورساتك. الرفع (فيديو، صورة، ملف) يتم من صفحة تعديل الكورس.</p>${tbl(['المحاضرة', 'الكورس', 'المحتوى', 'الحالة', ''], d.ls.map(l => `<tr><td>${esc(l.title)}</td><td>${esc(d.title[l.course_id])}</td><td>${l.video_url ? '🎬 ' : ''}${l.image_url ? '🖼️ ' : ''}${l.file_url ? '📎' : ''}</td><td>${l.approved ? 'معتمد' : '⏳ بانتظار الموافقة'}</td><td><a class="btn s" href="#/edit/${l.course_id}">تعديل</a></td></tr>`).join(''))}`;
+  if (kind === 'students') { const by = {}; d.en.forEach(e => (by[e.student_id] = by[e.student_id] || []).push(e.course_id)); html = `<h1>إدارة الطلاب</h1>${tbl(['الطالب', 'الكورسات', 'متوسط التقدم'], Object.entries(by).map(([sid, cl]) => `<tr><td>${esc(d.name[sid] || '')}</td><td>${cl.map(c => esc(d.title[c])).join('، ')}</td><td>${Math.round(cl.reduce((s, c) => s + d.pct(sid, c), 0) / cl.length)}%</td></tr>`).join(''))}`; }
+  if (kind === 'progress') html = `<h1>متابعة تقدم الطلاب</h1>${tbl(['الطالب', 'الكورس', 'التقدم'], d.en.map(e => { const p = d.pct(e.student_id, e.course_id); return `<tr><td>${esc(d.name[e.student_id] || '')}</td><td>${esc(d.title[e.course_id])}</td><td>${pctCls(p)} ${p}%</td></tr>`; }).join(''))}`;
+  if (kind === 'results') html = `<h1>نتائج الطلاب</h1>${tbl(['الطالب', 'الكورس', 'الدرجة', 'النسبة', 'التاريخ'], d.at.map(a => { const p = a.total ? Math.round(a.score / a.total * 100) : 0; return `<tr><td>${esc(d.name[a.student_id] || '')}</td><td>${esc(d.title[a.course_id])}</td><td>${a.score}/${a.total}</td><td>${p}%</td><td>${fmtDate(a.created_at)}</td></tr>`; }).join(''))}`;
+  if (!html) return teacherDash();
+  shellPage(act, html);
+}
 async function route() {
   const [path, q] = (location.hash.slice(1) || '/').split('?'); const p = path.split('/').filter(Boolean);
   window.scrollTo(0, 0);
@@ -382,6 +442,9 @@ async function route() {
       case 'quiz': return await quiz(p[1]);
       case 'cert': return await cert(p[1]);
       case 'edit': return await edit(p[1]);
+      case 's': return await sPage(p[1]);
+      case 't': return await tPage(p[1]);
+      case 'settings': await profilePage(); { const n = $('#np'); if (n) n.scrollIntoView({ block: 'center' }); } return;
       case 'teacher': if (needLogin()) return; return await teacherDash(p[1]);
       case 'login': return authForm(false);
       case 'register': return authForm(true);

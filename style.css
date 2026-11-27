@@ -130,3 +130,6 @@ header .auth .btn:not(.g):not(.o):not(.s){background:#7a1424;box-shadow:0 4px 12
 .tcard .tl{position:absolute;inset:0;bottom:auto;left:0;right:0;top:0;display:flex;align-items:center;justify-content:center;text-align:center;font-size:1.25rem;font-weight:800;padding:10px;text-shadow:0 2px 10px rgba(0,0,0,.55);background:transparent;z-index:1}
 .tcard .ta{display:none}
 @media(max-width:820px){.hero3{padding:34px 16px 40px}.tcard{height:170px}}
+
+/* v11 role menus */
+.sb .sbl.on{background:#fdeaea;color:var(--p2);border-right:4px solid var(--p)}.sb .sbl:hover{background:#fdeaea}.sb .sbl{border-bottom:0;margin:2px 0}

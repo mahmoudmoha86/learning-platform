@@ -1,5 +1,5 @@
 const root = $('#root'); let me = null, cur = 'overview';
-const SECTIONS = [['overview', '📊 نظرة عامة'], ['general', '⚙️ إعدادات الموقع'], ['hero', '🏠 الصفحة الرئيسية'], ['tracks', '🧭 مجالات التعلّم'], ['features', '✨ المميزات'], ['faqs', '❓ الأسئلة الشائعة'], ['testi', '💬 آراء الطلاب'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['contactset', '📞 التواصل والسوشيال'], ['legal', '📄 الشروط والخصوصية'], ['review', '✅ مراجعة المحتوى'], ['teachers', '👨‍🏫 المدرسون'], ['students', '🎓 الطلاب'], ['staff', '🛡️ الموظفون والصلاحيات'], ['logs', '🧾 سجل النشاطات'], ['courses', '📚 الكورسات'], ['cats', '🗂️ التصنيفات'], ['enr', '🎓 التسجيلات'], ['reviews', '⭐ التقييمات'], ['msgs', '✉️ الرسائل'], ['media', '🖼️ الصور']];
+const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['hero', '🖼️ إدارة الإعلانات والبنرات'], ['msgs', '✉️ رسائل واستفسارات الطلاب'], ['staff', '🛡️ إدارة الموظفين'], ['roles', '🔑 الصلاحيات والأدوار'], ['logs', '🧾 سجل النشاطات'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['tracks', '🧭 مجالات التعلّم'], ['features', '✨ المميزات'], ['faqs', '❓ الأسئلة الشائعة'], ['testi', '💬 آراء الطلاب'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['contactset', '📞 التواصل والسوشيال'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
 const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, p, v) => { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k] = a[k] || {}); a[ks.at(-1)] = v; };
 async function saveS() { const { error } = await sb.from('site_settings').upsert({ key: 'site', value: S }); toast(error ? 'فشل الحفظ: ' + error.message : 'تم الحفظ ✓'); if (!error) loadSettingsTheme(); }
@@ -42,7 +42,7 @@ function tableEditor(table, title, fields, order = 'position') { // fields: [key
 }
 const fmtDT = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 const PERMS = [['users', 'إدارة الطلاب والمدرسين'], ['courses', 'إدارة الكورسات والمحتوى'], ['exams', 'إدارة الامتحانات'], ['support', 'الدعم الفني والرسائل'], ['website', 'إدارة الموقع'], ['logs', 'سجل النشاطات'], ['finance', 'الحسابات المالية'], ['reports', 'التقارير']];
-const PERM_OF = { overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN' };
+const PERM_OF = { overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', sep: null };
 const can = k => !me ? false : me.role === 'admin' || (me.role === 'supervisor' && (PERM_OF[k] === null || (PERM_OF[k] !== 'ADMIN' && me.permissions && me.permissions[PERM_OF[k]])));
 function modal(html, onReady) {
   const o = document.createElement('div'); o.className = 'mdl'; o.innerHTML = `<div class="mdb"><button class="mdx" aria-label="إغلاق">✕</button>${html}</div>`; document.body.append(o);
@@ -173,6 +173,22 @@ const pages = {
     $$('[data-r]').forEach(b => b.onclick = () => done(b.dataset.r, { status: 'draft' }));
     $$('[data-d]').forEach(b => b.onclick = () => { if (confirm('حذف نهائي؟')) done(b.dataset.d); });
   },
+  async lectures() {
+    const { data, error } = await sb.from('lessons').select('id,title,position,approved,video_url,image_url,file_url,course_id,courses(title,status,profiles!teacher_id(full_name))').order('created_at', { ascending: false });
+    if (error) throw error;
+    dtable({ title: 'إدارة الأقسام والمحاضرات', rows: data || [], search: r => `${r.title} ${r.courses?.title || ''} ${r.courses?.profiles?.full_name || ''}`,
+      filters: [{ l: 'الحالة', opts: [['a', 'معتمد'], ['p', 'بانتظار الموافقة']], f: (r, v) => v === 'a' ? r.approved : !r.approved }, { l: 'المحتوى', opts: [['v', 'فيديو'], ['i', 'صورة'], ['f', 'ملف']], f: (r, v) => v === 'v' ? r.video_url : v === 'i' ? r.image_url : r.file_url }],
+      cols: [{ l: 'المحاضرة', v: r => `<b>${esc(r.title)}</b>`, s: r => r.title }, { l: 'الكورس', v: r => esc(r.courses?.title), s: r => r.courses?.title || '' }, { l: 'المدرس', v: r => esc(r.courses?.profiles?.full_name || '-'), s: r => r.courses?.profiles?.full_name || '' }, { l: 'المحتوى', v: r => `${r.video_url ? '🎬 ' : ''}${r.image_url ? '🖼️ ' : ''}${r.file_url ? '📎' : ''}` || '-', s: r => (r.video_url ? 1 : 0) + (r.file_url ? 1 : 0) }, { l: 'الحالة', v: r => r.approved ? '<span class="tag" style="background:#e6f6ea;color:#067647">معتمد</span>' : '<span class="tag y">بانتظار الموافقة</span>', s: r => r.approved }],
+      actions: r => [['e', 'فتح وتعديل'], ...(r.approved ? [] : [['a', 'موافقة', 'y']]), ['x', 'حذف', 'r']],
+      onAct: async (act, r) => { if (act === 'e') { location.href = `index.html#/edit/${r.course_id}`; return; } if (act === 'a') { const { error } = await sb.from('lessons').update({ approved: true }).eq('id', r.id); error ? toast(error.message) : (toast('تمت الموافقة ✓'), show('lectures')); } if (act === 'x' && confirm('حذف المحاضرة نهائيًا؟')) { const { error } = await sb.from('lessons').delete().eq('id', r.id); error ? toast(error.message) : (toast('تم الحذف ✓'), show('lectures')); } } });
+  },
+  async roles() {
+    const { data: ps } = await sb.rpc('admin_profiles');
+    const n = r => (ps || []).filter(p => p.role === r).length;
+    const rows = [['admin', 'المدير الرئيسي', 'كل الصلاحيات: جميع الأقسام والإعدادات والموظفين والتقارير.'], ['supervisor', 'المشرف', 'متابعة الطلاب والمدرسين والكورسات والامتحانات والشكاوى حسب الصلاحيات الممنوحة له فقط. لا يعدّل حسابات المدراء.'], ['teacher', 'المدرس', 'يدير كورساته فقط: محاضرات وفيديوهات وملفات وأسئلة، ويتابع طلابه ونتائجهم. المحتوى لا يظهر للطلاب إلا بعد موافقة الإدارة.'], ['student', 'الطالب', 'يشاهد الكورسات المسجّل بها ويؤدي الاختبارات ويتابع تقدمه وشهاداته.']];
+    root.querySelector('#pg').innerHTML = `<h1>الصلاحيات والأدوار</h1><p class="muted">تُطبَّق هذه الصلاحيات من قاعدة البيانات نفسها. لتحديد صلاحيات مشرف أو مدرس افتح صفحة إدارة الموظفين أو إدارة المدرسين.</p>${rows.map(([k, t, d]) => `<div class="box"><div class="row"><b style="flex:1">${t}</b><span class="tag">${n(k)} حساب</span></div><p class="muted">${d}</p>${k === 'supervisor' ? `<div>الصلاحيات المتاحة: ${PERMS.map(([, l]) => `<span class="tag">${l}</span>`).join(' ')}</div>` : ''}</div>`).join('')}<p><a class="btn" href="#" id="gs">إدارة الموظفين والصلاحيات</a></p>`;
+    $('#gs').onclick = e => { e.preventDefault(); show('staff'); };
+  },
   async teachers() { await accountsPage('teacher'); },
   async students() { await accountsPage('student'); },
   async staff() { await accountsPage('staff'); },
@@ -228,7 +244,7 @@ async function show(k) {
   try { await pages[k](); } catch (e) { root.querySelector('#pg').innerHTML = '<p>حصل خطأ: ' + esc(e.message) + '</p>'; console.error(e); }
 }
 function shell() {
-  root.innerHTML = `<div class="shell"><aside class="side"><div class="sbh"><span class="lg">🎓</span> ${esc(S.name || "منصة تعلّم")}<small>لوحة الإدارة</small></div>${SECTIONS.filter(([k]) => can(k)).map(([k, l]) => `<a data-k="${k}">${l}</a>`).join('')}<a href="index.html" target="_blank">↗ فتح الموقع</a><a id="lo">🚪 خروج</a></aside><div class="mw"><div class="tb"><div class="hs2"><button aria-label="بحث">🔍</button><input id="sq" placeholder="ابحث في الأقسام"></div><span class="bell">🔔</span><span class="adm-u">👤 ${esc(me.full_name || "الأدمن")}</span></div><section class="cont" id="pg"></section></div></div>`;
+  root.innerHTML = `<div class="shell"><aside class="side"><div class="sbh"><span class="lg">🎓</span> ${esc(S.name || "منصة تعلّم")}<small>لوحة الإدارة</small></div>${SECTIONS.filter(([k]) => can(k)).map(([k, l]) => k === 'sep' ? `<div class="sepl">${l}</div>` : `<a data-k="${k}">${l}</a>`).join('')}<a href="index.html" target="_blank">↗ فتح الموقع</a><a href="index.html#/profile">👤 الملف الشخصي</a><a id="lo">🚪 تسجيل الخروج</a></aside><div class="mw"><div class="tb"><div class="hs2"><button aria-label="بحث">🔍</button><input id="sq" placeholder="ابحث في الأقسام"></div><span class="adm-u">👤 ${esc(me.full_name || "الأدمن")}</span></div><section class="cont" id="pg"></section></div></div>`;
   $$('.side a[data-k]').forEach(a => a.onclick = () => show(a.dataset.k));
   $('#sq').oninput = e => { const v = e.target.value.trim(); $$('.side a[data-k]').forEach(a => a.style.display = !v || a.innerText.includes(v) ? '' : 'none'); };
   $('#lo').onclick = async () => { await sb.auth.signOut(); boot(); };
