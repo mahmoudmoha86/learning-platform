@@ -86,7 +86,7 @@ async function home() {
     sb.from('testimonials').select('*').order('position'), sb.from('partners').select('*').order('position'), sb.from('faqs').select('*').order('position').limit(5),
     cnt('courses', ['status', 'published']), cnt('profiles', ['role', 'student']), cnt('profiles', ['role', 'teacher']), cnt('enrollments')]);
   const trk = (S.tracks || []).slice(0, 3);
-  const grads = ['#153a5c,#3b7f94', '#0c2038,#24607a', '#112f4d,#5b9bad'];
+  const grads = ['#8c0000,#e30000', '#6e0000,#c90000', '#a00000,#f04040'];
   const trkCards = trk.map((t, i) => `<a class="tcard" href="#/courses" style="${t.image ? `background-image:url('${esc(t.image)}')` : `background:linear-gradient(145deg,${grads[i % 3]})`}"><span class="te">${t.image ? '' : esc(t.emoji || '📘')}</span><span class="ta">↖</span><span class="tl">${esc(t.title)}</span></a>`).join('');
   app.innerHTML = `<section class="hero3"><span class="deco d1"></span><span class="deco d2"></span><span class="deco d3"></span><button class="arr l" aria-label="prev">→</button><button class="arr r" aria-label="next">←</button>
   <span class="pill">أكثر من ${Math.max(nc, 1)} دورة مجانية</span><h1>${esc(S.hero_title || '')}</h1><p>${esc(S.hero_subtitle || '')}</p>
