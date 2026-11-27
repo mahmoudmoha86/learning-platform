@@ -1,5 +1,5 @@
 const root = $('#root'); let me = null, cur = 'overview';
-const SECTIONS = [['overview', '📊 نظرة عامة'], ['general', '⚙️ إعدادات الموقع'], ['hero', '🏠 الصفحة الرئيسية'], ['tracks', '🧭 مجالات التعلّم'], ['features', '✨ المميزات'], ['faqs', '❓ الأسئلة الشائعة'], ['testi', '💬 آراء الطلاب'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['contactset', '📞 التواصل والسوشيال'], ['legal', '📄 الشروط والخصوصية'], ['review', '✅ مراجعة المحتوى'], ['teachers', '👨‍🏫 المدرسون'], ['students', '🎓 الطلاب'], ['courses', '📚 الكورسات'], ['cats', '🗂️ التصنيفات'], ['users', '👥 المستخدمون'], ['enr', '🎓 التسجيلات'], ['reviews', '⭐ التقييمات'], ['msgs', '✉️ الرسائل'], ['media', '🖼️ الصور']];
+const SECTIONS = [['overview', '📊 نظرة عامة'], ['general', '⚙️ إعدادات الموقع'], ['hero', '🏠 الصفحة الرئيسية'], ['tracks', '🧭 مجالات التعلّم'], ['features', '✨ المميزات'], ['faqs', '❓ الأسئلة الشائعة'], ['testi', '💬 آراء الطلاب'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['contactset', '📞 التواصل والسوشيال'], ['legal', '📄 الشروط والخصوصية'], ['review', '✅ مراجعة المحتوى'], ['teachers', '👨‍🏫 المدرسون'], ['students', '🎓 الطلاب'], ['staff', '🛡️ الموظفون والصلاحيات'], ['logs', '🧾 سجل النشاطات'], ['courses', '📚 الكورسات'], ['cats', '🗂️ التصنيفات'], ['enr', '🎓 التسجيلات'], ['reviews', '⭐ التقييمات'], ['msgs', '✉️ الرسائل'], ['media', '🖼️ الصور']];
 const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, p, v) => { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k] = a[k] || {}); a[ks.at(-1)] = v; };
 async function saveS() { const { error } = await sb.from('site_settings').upsert({ key: 'site', value: S }); toast(error ? 'فشل الحفظ: ' + error.message : 'تم الحفظ ✓'); if (!error) loadSettingsTheme(); }
@@ -40,6 +40,103 @@ function tableEditor(table, title, fields, order = 'position') { // fields: [key
     $('#add').onclick = async () => { const o = fields.some(f => f[0] === 'position') ? { position: (data || []).length + 1 } : {}; fields.forEach(([k, , t]) => { if (t !== 'img' && k !== 'position') o[k] = k === 'name' || k === 'q' ? 'جديد' : ''; }); const { error } = await sb.from(table).insert(o); if (error) toast(error.message); draw(); };
   }; draw();
 }
+const fmtDT = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
+const PERMS = [['users', 'إدارة الطلاب والمدرسين'], ['courses', 'إدارة الكورسات والمحتوى'], ['exams', 'إدارة الامتحانات'], ['support', 'الدعم الفني والرسائل'], ['website', 'إدارة الموقع'], ['logs', 'سجل النشاطات'], ['finance', 'الحسابات المالية'], ['reports', 'التقارير']];
+const PERM_OF = { overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN' };
+const can = k => !me ? false : me.role === 'admin' || (me.role === 'supervisor' && (PERM_OF[k] === null || (PERM_OF[k] !== 'ADMIN' && me.permissions && me.permissions[PERM_OF[k]])));
+function modal(html, onReady) {
+  const o = document.createElement('div'); o.className = 'mdl'; o.innerHTML = `<div class="mdb"><button class="mdx" aria-label="إغلاق">✕</button>${html}</div>`; document.body.append(o);
+  const close = () => o.remove(); o.onclick = e => { if (e.target === o) close(); }; o.querySelector('.mdx').onclick = close; onReady && onReady(o, close); return close;
+}
+async function call(fn, args, okMsg) { const { data, error } = await sb.rpc(fn, args); if (error) { toast(error.message); return { error }; } if (okMsg) toast(okMsg); return { data }; }
+function dtable(cfg) {
+  const st = { q: '', f: {}, sc: cfg.sort ? cfg.sort[0] : -1, dir: cfg.sort ? cfg.sort[1] : 1 };
+  const box = root.querySelector('#pg');
+  box.innerHTML = `<div class="row"><h1 style="flex:1">${cfg.title} <span class="muted" id="dc"></span></h1>${cfg.add || ''}</div>
+  <div class="row dtb"><input id="dq" placeholder="بحث..." style="max-width:260px">${(cfg.filters || []).map((f, i) => `<select data-f="${i}"><option value="">${f.l}: الكل</option>${f.opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>`).join('')}${cfg.extra || ''}</div>
+  <div class="tw"><table><thead><tr>${cfg.cols.map((c, i) => `<th data-s="${i}" style="cursor:pointer">${c.l} <i></i></th>`).join('')}${cfg.actions ? '<th></th>' : ''}</tr></thead><tbody id="dbd"></tbody></table></div>`;
+  const draw = () => {
+    let rows = (cfg.rows || []).filter(r => (!st.q || String(cfg.search(r)).toLowerCase().includes(st.q)) && (cfg.filters || []).every((f, i) => !st.f[i] || f.f(r, st.f[i])));
+    if (st.sc >= 0) { const g = cfg.cols[st.sc].s || (() => ''); rows = [...rows].sort((a, b) => { const x = g(a), y = g(b); return (x > y ? 1 : x < y ? -1 : 0) * st.dir; }); }
+    box.querySelector('#dc').textContent = `(${rows.length})`;
+    box.querySelector('#dbd').innerHTML = rows.map((r, ri) => `<tr>${cfg.cols.map(c => `<td>${c.v(r)}</td>`).join('')}${cfg.actions ? `<td style="white-space:nowrap">${cfg.actions(r).map(([a, l, cl]) => `<button class="btn s ${cl || 'o'}" data-a="${a}" data-i="${ri}">${l}</button>`).join(' ')}</td>` : ''}</tr>`).join('') || `<tr><td colspan="${cfg.cols.length + 1}" class="muted" style="text-align:center">لا توجد نتائج</td></tr>`;
+    box.querySelectorAll('th[data-s] i').forEach((el, i) => el.textContent = i === st.sc ? (st.dir > 0 ? '▲' : '▼') : '');
+    box.querySelectorAll('#dbd [data-a]').forEach(b => b.onclick = () => cfg.onAct(b.dataset.a, rows[+b.dataset.i]));
+  };
+  box.querySelector('#dq').oninput = e => { st.q = e.target.value.trim().toLowerCase(); draw(); };
+  box.querySelectorAll('[data-f]').forEach(s => s.onchange = () => { st.f[s.dataset.f] = s.value; draw(); });
+  box.querySelectorAll('th[data-s]').forEach(th => th.onclick = () => { const i = +th.dataset.s; if (st.sc === i) st.dir *= -1; else { st.sc = i; st.dir = 1; } draw(); });
+  cfg.onReady && cfg.onReady(box);
+  draw();
+}
+async function accountsPage(kind) {
+  const [{ data: ps, error: e1 }, { data: en }, { data: ls }, { data: pr }, { data: cs }, { data: qa }, { data: rv }] = await Promise.all([sb.rpc('admin_profiles'), sb.from('enrollments').select('student_id,course_id'), sb.from('lessons').select('id,course_id').eq('approved', true), sb.from('lesson_progress').select('student_id,lesson_id'), sb.from('courses').select('id,title,teacher_id,status'), sb.from('quiz_attempts').select('student_id,course_id,score,total,created_at'), sb.from('reviews').select('course_id,rating')]);
+  if (e1) throw e1;
+  const title = Object.fromEntries((cs || []).map(c => [c.id, c.title])), lc = {}; (ls || []).forEach(l => (lc[l.course_id] = lc[l.course_id] || new Set()).add(l.id));
+  const roles = kind === 'staff' ? ['admin', 'supervisor'] : [kind];
+  const rows = (ps || []).filter(p => roles.includes(p.role)).map(p => {
+    if (kind === 'student') {
+      const my = (en || []).filter(e => e.student_id === p.id), done = new Set((pr || []).filter(x => x.student_id === p.id).map(x => x.lesson_id));
+      const items = my.map(e => { const all = [...(lc[e.course_id] || [])], d = all.filter(x => done.has(x)).length; return { id: e.course_id, t: title[e.course_id], d, n: all.length, pc: all.length ? Math.round(d / all.length * 100) : 0 }; });
+      return { ...p, items, nc: items.length, avg: items.length ? Math.round(items.reduce((s, i) => s + i.pc, 0) / items.length) : 0, att: (qa || []).filter(a => a.student_id === p.id) };
+    }
+    if (kind === 'teacher') {
+      const mine = (cs || []).filter(c => c.teacher_id === p.id), ids = new Set(mine.map(c => c.id)), es = (en || []).filter(e => ids.has(e.course_id)), rr = (rv || []).filter(r => ids.has(r.course_id));
+      return { ...p, mine, nc: mine.length, ns: new Set(es.map(e => e.student_id)).size, ne: es.length, rating: rr.length ? +(rr.reduce((s, r) => s + r.rating, 0) / rr.length).toFixed(1) : 0, es };
+    }
+    return p;
+  });
+  const lbl = { student: 'طالب', teacher: 'مدرس', staff: 'موظف' }[kind];
+  const stTag = r => r.suspended ? '<span class="tag" style="background:#fdeaea;color:#b42318">موقوف</span>' : '<span class="tag" style="background:#e6f6ea;color:#067647">نشط</span>';
+  const common = [{ l: 'الاسم', v: r => `<b>${esc(r.full_name)}</b>`, s: r => r.full_name }, { l: 'البريد', v: r => esc(r.email), s: r => r.email }, { l: 'الهاتف', v: r => esc(r.phone || '-'), s: r => r.phone || '' }];
+  const cols = kind === 'student' ? [...common, { l: 'الكورسات', v: r => r.nc, s: r => r.nc }, { l: 'متوسط التقدم', v: r => r.avg + '%', s: r => r.avg }, { l: 'الحالة', v: stTag, s: r => r.suspended }, { l: 'التسجيل', v: r => fmtDate(r.created_at), s: r => r.created_at }]
+    : kind === 'teacher' ? [...common, { l: 'الكورسات', v: r => r.nc, s: r => r.nc }, { l: 'الطلاب', v: r => r.ns, s: r => r.ns }, { l: 'التقييم', v: r => r.rating ? '★ ' + r.rating : '-', s: r => r.rating }, { l: 'الحالة', v: stTag, s: r => r.suspended }]
+      : [...common, { l: 'الدور', v: r => r.role === 'admin' ? 'مدير رئيسي' : 'مشرف', s: r => r.role }, { l: 'الصلاحيات', v: r => r.role === 'admin' ? 'كاملة' : PERMS.filter(([k]) => r.permissions && r.permissions[k]).map(([, l]) => l).join('، ') || '-', s: r => 0 }, { l: 'الحالة', v: stTag, s: r => r.suspended }, { l: 'آخر دخول', v: r => fmtDT(r.last_sign_in_at), s: r => r.last_sign_in_at || '' }];
+  const reload = () => show(cur);
+  const form = (r) => {
+    const isNew = !r, perms = r?.permissions || {};
+    return `<h2>${isNew ? 'إضافة ' : 'تعديل '}${lbl}</h2><label>الاسم</label><input id="fn" value="${esc(r?.full_name || '')}">${isNew ? `<label>البريد الإلكتروني</label><input id="fe" type="email" dir="ltr">` : `<label>البريد</label><input value="${esc(r.email)}" disabled dir="ltr">`}
+    <label>الهاتف</label><input id="fp" value="${esc(r?.phone || '')}" dir="ltr">${kind === 'teacher' ? `<label>المسمى</label><input id="ft" value="${esc(r?.title || '')}"><label>نبذة</label><textarea id="fb" rows="2">${esc(r?.bio || '')}</textarea><label><input type="checkbox" id="fcc" style="width:auto;margin:0 0 0 6px" ${perms.create_course === false ? '' : 'checked'}>يسمح له بإنشاء كورسات جديدة</label>` : ''}
+    ${isNew ? '<label>كلمة المرور (6 أحرف على الأقل)</label><input id="fw" type="text" dir="ltr" autocomplete="off">' : ''}
+    ${kind === 'staff' ? `<label>الدور</label><select id="fr"><option value="supervisor" ${r?.role === 'admin' ? '' : 'selected'}>مشرف</option><option value="admin" ${r?.role === 'admin' ? 'selected' : ''}>مدير رئيسي</option></select><div id="pb"><b>صلاحيات المشرف</b>${PERMS.map(([k, l]) => `<label style="display:block"><input type="checkbox" data-pm="${k}" style="width:auto;margin:0 0 0 6px" ${perms[k] ? 'checked' : ''}>${l}</label>`).join('')}</div>` : ''}
+    ${!isNew && kind !== 'staff' ? `<label>الدور</label><select id="fr"><option value="student" ${r.role === 'student' ? 'selected' : ''}>طالب</option><option value="teacher" ${r.role === 'teacher' ? 'selected' : ''}>مدرس</option></select>` : ''}
+    <div class="row" style="margin-top:12px"><button class="btn" id="fs">حفظ</button></div>`;
+  };
+  const openForm = r => modal(form(r), (o, close) => {
+    o.querySelector('#fs').onclick = async () => {
+      const name = o.querySelector('#fn').value.trim(); if (!name) return toast('اكتب الاسم');
+      const perms = {}; o.querySelectorAll('[data-pm]').forEach(c => perms[c.dataset.pm] = c.checked); const cc = o.querySelector('#fcc'); if (cc) perms.create_course = cc.checked;
+      const role = o.querySelector('#fr') ? o.querySelector('#fr').value : (kind === 'staff' ? 'supervisor' : kind);
+      if (!r) {
+        const { error, data: nid } = await call('admin_create_user', { p_email: o.querySelector('#fe').value, p_password: o.querySelector('#fw').value, p_name: name, p_role: role, p_phone: o.querySelector('#fp').value, p_perms: kind === 'student' ? {} : perms }); if (error) return;
+        if (kind === 'teacher' && nid) await sb.from('profiles').update({ title: o.querySelector('#ft').value || null, bio: o.querySelector('#fb').value || null }).eq('id', nid);
+        toast('تمت الإضافة بنجاح ✓'); close(); reload();
+      } else {
+        const upd = { full_name: name, phone: o.querySelector('#fp').value || null };
+        if (kind === 'teacher') { upd.title = o.querySelector('#ft').value || null; upd.bio = o.querySelector('#fb').value || null; upd.permissions = perms; }
+        if (kind === 'staff') { upd.permissions = perms; if (r.id !== me.id) upd.role = role; } else if (o.querySelector('#fr')) upd.role = role;
+        const { error } = await sb.from('profiles').update(upd).eq('id', r.id); if (error) return toast(error.message); toast('تم الحفظ بنجاح ✓'); close(); reload();
+      }
+    };
+    if (kind === 'teacher' && !r) { /* teacher extra fields saved on edit */ }
+  });
+  const details = r => modal(kind === 'student' ? `<h2>${esc(r.full_name)}</h2><p class="muted">${esc(r.email)} · ${esc(r.phone || '')}</p><h3>الكورسات والتقدم</h3>${r.items.map(i => `<div class="row" style="margin:6px 0"><span style="min-width:170px">${esc(i.t)}</span><div class="bar" style="flex:1"><i style="width:${i.pc}%"></i></div><span class="muted">${i.pc}% (${i.d}/${i.n})</span><button class="btn s o" data-rs="${i.id}">تصفير</button><button class="btn s r" data-un="${i.id}">إلغاء التسجيل</button></div>`).join('') || '<p class="muted">غير مسجّل في أي كورس</p>'}<h3>نتائج الاختبارات</h3>${r.att.map(a => `<div class="muted">${esc(title[a.course_id])}: ${a.score}/${a.total} · ${fmtDate(a.created_at)}</div>`).join('') || '<p class="muted">لا توجد نتائج</p>'}`
+    : `<h2>${esc(r.full_name)}</h2><p class="muted">${esc(r.email)} · ${esc(r.phone || '')}</p><p>الكورسات: <b>${r.nc}</b> · الطلاب: <b>${r.ns}</b> · التسجيلات: <b>${r.ne}</b> · التقييم: <b>${r.rating || '-'}</b></p>${r.mine.map(c => `<div>• ${esc(c.title)} (${stAr[c.status]}): ${r.es.filter(e => e.course_id === c.id).length} طالب</div>`).join('')}<p><a class="btn" href="index.html#/teacher/${r.id}">دخول صفحة المدرس</a></p>`,
+    (o, close) => {
+      o.querySelectorAll('[data-un]').forEach(b => b.onclick = async () => { if (!confirm('إلغاء تسجيل الطالب من هذا الكورس؟')) return; const { error } = await sb.from('enrollments').delete().eq('student_id', r.id).eq('course_id', b.dataset.un); error ? toast(error.message) : (toast('تم إلغاء التسجيل'), close(), reload()); });
+      o.querySelectorAll('[data-rs]').forEach(b => b.onclick = async () => { if (!confirm('تصفير تقدم الطالب في هذا الكورس؟')) return; const ids = [...(lc[b.dataset.rs] || [])]; const { error } = await sb.from('lesson_progress').delete().eq('student_id', r.id).in('lesson_id', ids); error ? toast(error.message) : (toast('تم تصفير التقدم'), close(), reload()); });
+    });
+  const pwForm = r => modal(`<h2>إعادة تعيين كلمة المرور</h2><p class="muted">${esc(r.full_name)}</p><label>كلمة المرور الجديدة (6 أحرف على الأقل)</label><input id="np" type="text" dir="ltr" autocomplete="off"><button class="btn" id="npb" style="margin-top:10px">تعيين</button>`, (o, close) => { o.querySelector('#npb').onclick = async () => { const { error } = await call('admin_reset_password', { p_user: r.id, p_password: o.querySelector('#np').value }, 'تم تغيير كلمة المرور بنجاح ✓'); if (!error) close(); }; });
+  dtable({ title: { student: 'إدارة الطلاب', teacher: 'إدارة المدرسين', staff: 'الموظفون والصلاحيات' }[kind], rows, cols, search: r => `${r.full_name} ${r.email} ${r.phone || ''}`,
+    filters: [{ l: 'الحالة', opts: [['a', 'نشط'], ['s', 'موقوف']], f: (r, v) => v === 's' ? r.suspended : !r.suspended }],
+    add: `<button class="btn y" id="addu">+ إضافة ${lbl}</button>`, onReady: b => b.querySelector('#addu').onclick = () => openForm(null),
+    actions: r => [['d', 'تفاصيل'], ['e', 'تعديل'], ['p', 'كلمة المرور'], r.suspended ? ['t', 'تفعيل', 'y'] : ['t', 'إيقاف', 'o'], ['x', 'حذف', 'r']].filter(a => !(kind === 'staff' && a[0] === 'd')),
+    onAct: async (a, r) => {
+      if (a === 'd') return details(r); if (a === 'e') return openForm(r); if (a === 'p') return pwForm(r);
+      if (a === 't') { if (r.id === me.id) return toast('لا يمكنك إيقاف حسابك'); if (!r.suspended && !confirm(`إيقاف حساب ${r.full_name}؟ لن يتمكن من الدخول.`)) return; const { error } = await sb.from('profiles').update({ suspended: !r.suspended }).eq('id', r.id); error ? toast(error.message) : (toast(r.suspended ? 'تم تفعيل الحساب ✓' : 'تم إيقاف الحساب ✓'), reload()); }
+      if (a === 'x') { if (!confirm(`حذف حساب ${r.full_name} نهائيًا؟ لا يمكن التراجع.`)) return; const { error } = await call('admin_delete_user', { p_user: r.id }, 'تم حذف الحساب ✓'); if (!error) reload(); }
+    } });
+}
 const pages = {
   async overview() {
     const cnt = async (t, f) => { let q = sb.from(t).select('*', { count: 'exact', head: true }); if (f) q = q.eq(...f); return (await q).count || 0; };
@@ -76,22 +173,17 @@ const pages = {
     $$('[data-r]').forEach(b => b.onclick = () => done(b.dataset.r, { status: 'draft' }));
     $$('[data-d]').forEach(b => b.onclick = () => { if (confirm('حذف نهائي؟')) done(b.dataset.d); });
   },
-  async teachers() {
-    const [{ data: ts }, { data: cs }, { data: en }] = await Promise.all([sb.from('profiles').select('id,full_name,phone,title').eq('role', 'teacher'), sb.from('courses').select('id,title,status,teacher_id'), sb.from('enrollments').select('student_id,course_id')]);
-    root.querySelector('#pg').innerHTML = `<h1>المدرسون (${(ts || []).length})</h1>${(ts || []).map(t => {
-      const mine = (cs || []).filter(c => c.teacher_id === t.id), ids = new Set(mine.map(c => c.id)), es = (en || []).filter(e => ids.has(e.course_id)), uniq = new Set(es.map(e => e.student_id)).size;
-      return `<div class="box"><div class="row"><div style="flex:1"><b>${esc(t.full_name)}</b> <span class="muted">${esc(t.title || '')} ${esc(t.phone || '')}</span><div>عدد الكورسات: <b>${mine.length}</b> · إجمالي التسجيلات: <b>${es.length}</b> · عدد الطلاب: <b>${uniq}</b></div></div><a class="btn s" href="index.html#/teacher/${t.id}">دخول صفحة المدرس</a></div>
-      ${mine.map(c => `<div class="muted">• ${esc(c.title)} (${stAr[c.status]}): ${es.filter(e => e.course_id === c.id).length} طالب</div>`).join('')}</div>`; }).join('') || '<p class="muted">لا يوجد مدرسون بعد. غيّر دور مستخدم إلى مدرس من قسم المستخدمين.</p>'}`;
-  },
-  async students() {
-    const [{ data: ss }, { data: en }, { data: ls }, { data: pr }, { data: cs }] = await Promise.all([sb.from('profiles').select('id,full_name,phone,created_at').eq('role', 'student').order('created_at', { ascending: false }), sb.from('enrollments').select('student_id,course_id'), sb.from('lessons').select('id,course_id').eq('approved', true), sb.from('lesson_progress').select('student_id,lesson_id'), sb.from('courses').select('id,title')]);
-    const title = Object.fromEntries((cs || []).map(c => [c.id, c.title])), lc = {}; (ls || []).forEach(l => (lc[l.course_id] = lc[l.course_id] || new Set()).add(l.id));
-    root.querySelector('#pg').innerHTML = `<h1>الطلاب (${(ss || []).length})</h1>${(ss || []).map(s => {
-      const my = (en || []).filter(e => e.student_id === s.id), done = new Set((pr || []).filter(p => p.student_id === s.id).map(p => p.lesson_id));
-      return `<div class="box"><div><b>${esc(s.full_name)}</b> <span class="muted">${esc(s.phone || '')} · انضم ${fmtDate(s.created_at)}</span></div><div>عدد الكورسات المسجّل بها: <b>${my.length}</b></div>
-      ${my.map(e => { const all = [...(lc[e.course_id] || [])], d = all.filter(x => done.has(x)).length, pc = all.length ? Math.round(d / all.length * 100) : 0; return `<div class="row" style="margin:6px 0"><span style="min-width:180px">${esc(title[e.course_id])}</span><div class="bar" style="flex:1;min-width:120px"><i style="width:${pc}%"></i></div><span class="muted">${pc}% (${d}/${all.length})</span><button class="btn s o" data-rs="${s.id}:${e.course_id}">تصفير التقدم</button><button class="btn s r" data-un="${s.id}:${e.course_id}">إلغاء التسجيل</button></div>`; }).join('') || '<p class="muted">غير مسجّل في أي كورس.</p>'}</div>`; }).join('') || '<p class="muted">لا يوجد طلاب بعد.</p>'}`;
-    $$('[data-un]').forEach(b => b.onclick = async () => { const [s, c] = b.dataset.un.split(':'); if (confirm('إلغاء التسجيل؟')) { await sb.from('enrollments').delete().eq('student_id', s).eq('course_id', c); show('students'); } });
-    $$('[data-rs]').forEach(b => b.onclick = async () => { const [s, c] = b.dataset.rs.split(':'); const ids = [...(lc[c] || [])]; if (ids.length && confirm('تصفير تقدم الطالب في هذا الكورس؟')) { await sb.from('lesson_progress').delete().eq('student_id', s).in('lesson_id', ids); show('students'); } });
+  async teachers() { await accountsPage('teacher'); },
+  async students() { await accountsPage('student'); },
+  async staff() { await accountsPage('staff'); },
+  async logs() {
+    const { data, error } = await sb.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(1000);
+    if (error) throw error;
+    const act = { insert: 'إضافة', update: 'تعديل', delete: 'حذف', suspend: 'إيقاف', activate: 'تفعيل', change_role: 'تغيير الدور', change_permissions: 'تغيير الصلاحيات', approve: 'موافقة', create: 'إنشاء حساب', reset_password: 'إعادة تعيين كلمة المرور', status_published: 'نشر', status_draft: 'إلغاء نشر', status_pending: 'إرسال للمراجعة' };
+    const ent = { profiles: 'حسابات', courses: 'كورسات', lessons: 'دروس', quiz_questions: 'أسئلة', enrollments: 'تسجيلات', categories: 'تصنيفات', site_settings: 'إعدادات الموقع' };
+    dtable({ title: 'سجل النشاطات', rows: data || [], search: r => `${r.actor_name} ${r.details?.label || ''}`,
+      filters: [{ l: 'العملية', opts: Object.entries(act), f: (r, v) => r.action === v }, { l: 'القسم', opts: Object.entries(ent), f: (r, v) => r.entity === v }, { l: 'الدور', opts: [['admin', 'مدير'], ['supervisor', 'مشرف'], ['teacher', 'مدرس']], f: (r, v) => r.actor_role === v }],
+      cols: [{ l: 'الوقت', v: r => fmtDT(r.created_at), s: r => r.created_at }, { l: 'المنفّذ', v: r => `${esc(r.actor_name)} <span class="muted">(${roleAr[r.actor_role] || r.actor_role})</span>`, s: r => r.actor_name }, { l: 'العملية', v: r => act[r.action] || esc(r.action), s: r => r.action }, { l: 'القسم', v: r => ent[r.entity] || esc(r.entity), s: r => r.entity }, { l: 'التفاصيل', v: r => esc(r.details?.label || ''), s: r => r.details?.label || '' }], sort: [0, -1] });
   },
   async courses() {
     const { data } = await sb.from('courses').select('*,profiles!teacher_id(full_name)').order('created_at', { ascending: false });
@@ -104,11 +196,6 @@ const pages = {
     $('#nw').onclick = async () => { const { data: c, error } = await sb.from('courses').insert({ title: 'كورس جديد', teacher_id: me.id, instructor_name: me.full_name }).select().single(); if (error) toast(error.message); else location.href = `index.html#/edit/${c.id}`; };
   },
   cats() { tableEditor('categories', 'التصنيفات', [['name', 'الاسم'], ['icon', 'إيموجي'], ['description', 'الوصف']], 'id'); },
-  async users() {
-    const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
-    root.querySelector('#pg').innerHTML = `<h1>المستخدمون (${(data || []).length})</h1><div class="tw"><table><tr><th>الاسم</th><th>الهاتف</th><th>الانضمام</th><th>الدور</th></tr>${(data || []).map(u => `<tr><td>${esc(u.full_name)}</td><td>${esc(u.phone)}</td><td>${fmtDate(u.created_at)}</td><td><select data-u="${u.id}" style="margin:0">${['student', 'teacher', 'admin'].map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${roleAr[r]}</option>`).join('')}</select></td></tr>`).join('')}</table></div>`;
-    $$('[data-u]').forEach(s => s.onchange = async () => { if (s.dataset.u === me.id && s.value !== 'admin' && !confirm('ستفقد صلاحية الأدمن، متأكد؟')) { s.value = 'admin'; return; } const { error } = await sb.from('profiles').update({ role: s.value }).eq('id', s.dataset.u); toast(error ? error.message : 'تم ✓'); });
-  },
   async enr() {
     const { data } = await sb.from('enrollments').select('created_at,student_id,course_id,profiles(full_name),courses(title)').order('created_at', { ascending: false }).limit(200);
     root.querySelector('#pg').innerHTML = `<h1>التسجيلات</h1><div class="tw"><table><tr><th>الطالب</th><th>الكورس</th><th>التاريخ</th><th></th></tr>${(data || []).map(e => `<tr><td>${esc(e.profiles?.full_name)}</td><td>${esc(e.courses?.title)}</td><td>${fmtDate(e.created_at)}</td><td><button class="btn s r" data-s="${e.student_id}" data-c="${e.course_id}">حذف</button></td></tr>`).join('')}</table></div>`;
@@ -141,11 +228,11 @@ async function show(k) {
   try { await pages[k](); } catch (e) { root.querySelector('#pg').innerHTML = '<p>حصل خطأ: ' + esc(e.message) + '</p>'; console.error(e); }
 }
 function shell() {
-  root.innerHTML = `<div class="shell"><aside class="side"><div class="sbh"><span class="lg">🎓</span> ${esc(S.name || "منصة تعلّم")}<small>لوحة الإدارة</small></div>${SECTIONS.map(([k, l]) => `<a data-k="${k}">${l}</a>`).join('')}<a href="index.html" target="_blank">↗ فتح الموقع</a><a id="lo">🚪 خروج</a></aside><div class="mw"><div class="tb"><div class="hs2"><button aria-label="بحث">🔍</button><input id="sq" placeholder="ابحث في الأقسام"></div><span class="bell">🔔</span><span class="adm-u">👤 ${esc(me.full_name || "الأدمن")}</span></div><section class="cont" id="pg"></section></div></div>`;
+  root.innerHTML = `<div class="shell"><aside class="side"><div class="sbh"><span class="lg">🎓</span> ${esc(S.name || "منصة تعلّم")}<small>لوحة الإدارة</small></div>${SECTIONS.filter(([k]) => can(k)).map(([k, l]) => `<a data-k="${k}">${l}</a>`).join('')}<a href="index.html" target="_blank">↗ فتح الموقع</a><a id="lo">🚪 خروج</a></aside><div class="mw"><div class="tb"><div class="hs2"><button aria-label="بحث">🔍</button><input id="sq" placeholder="ابحث في الأقسام"></div><span class="bell">🔔</span><span class="adm-u">👤 ${esc(me.full_name || "الأدمن")}</span></div><section class="cont" id="pg"></section></div></div>`;
   $$('.side a[data-k]').forEach(a => a.onclick = () => show(a.dataset.k));
   $('#sq').oninput = e => { const v = e.target.value.trim(); $$('.side a[data-k]').forEach(a => a.style.display = !v || a.innerText.includes(v) ? '' : 'none'); };
   $('#lo').onclick = async () => { await sb.auth.signOut(); boot(); };
-  const k = location.hash.slice(1); show(pages[k] ? k : 'overview');
+  const k = location.hash.slice(1); show(pages[k] && can(k) ? k : 'overview');
 }
 function login(msg = '') {
   root.innerHTML = `<div class="afm"><h1>دخول الإدارة</h1>${msg ? `<p style="color:#d92d20">${msg}</p>` : ''}<div class="fl"><label for="em">البريد الإلكتروني</label><input id="em" type="email"></div><div class="fl"><label for="pw">كلمة المرور</label><input id="pw" type="password"></div><button class="btn big2" id="ok">دخول</button><p><a href="index.html">← العودة للموقع</a></p></div>`;
@@ -154,7 +241,7 @@ function login(msg = '') {
 async function boot() {
   try { await loadSettings(); me = await getMe(); } catch (e) { console.error(e); }
   if (!me) return login();
-  if (me.role !== 'admin') { await sb.auth.signOut(); return login('هذا الحساب ليس أدمن.'); }
+  if (!['admin', 'supervisor'].includes(me.role) || me.suspended) { await sb.auth.signOut(); return login('هذا الحساب ليس له صلاحية الدخول للوحة الإدارة.'); }
   shell();
 }
 boot();
