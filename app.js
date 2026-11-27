@@ -51,17 +51,10 @@ const IC = {
 };
 function quick() {
   let el = document.getElementById('qa'); if (!el) { el = document.createElement('div'); el.id = 'qa'; document.body.appendChild(el); }
-  if (/^#?\/?(\?.*)?$/.test(location.hash)) { el.innerHTML = ''; document.body.classList.remove('hasrail'); return; }
-  const tr = (S.tracks || []).slice(0, 3), tic = ['bulb', 'case', 'book'];
-  const L = (h, i, t) => `<a href="${h}" title="${t}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${IC[i]}</svg><span>${t}</span></a>`;
-  el.innerHTML = `<nav class="rail" id="rail"><a class="rlogo" href="#/"><span class="lg">🎓</span><span>${esc(S.name || 'منصة تعلّم')}</span></a>
-  ${me ? L('#/dashboard', 'grid', 'لوحتي التعليمية') : L('#/login', 'key', 'تسجيل الدخول') + L('#/register', 'pen', 'إنشاء حساب')}
-  ${tr.map((t, i) => L('#/courses', tic[i] || 'book', esc(t.title))).join('')}
-  ${L('#/courses', 'books', 'تصفح جميع الدورات')}${me ? L('#/dashboard', 'star', 'المقترح لي') + L('#/dashboard', 'chart', 'أدائي وشهاداتي') : ''}${L('#/instructors', 'users', 'المدرسون')}${L('#/faq', 'help', 'الأسئلة الشائعة')}${L('#/contact', 'mail', 'اتصل بنا')}${me ? L('#/profile', 'user', 'حسابي') : ''}${me && (me.role === 'admin' || me.role === 'supervisor') ? L('admin.html', 'gear', 'لوحة الإدارة') : ''}</nav>`;
-  document.body.classList.add('hasrail'); const r = $('#rail');
-  const mark = () => { const h = location.hash || '#/'; let hit = null; $$('#rail a:not(.rlogo)').forEach(a => { a.classList.remove('act'); if (!hit && a.getAttribute('href') === h) hit = a; }); if (!hit && (h === '#/' || h === '')) hit = $('#rail a:not(.rlogo)'); if (hit) hit.classList.add('act'); };
-  mark(); window.removeEventListener('hashchange', window.__rm || (() => {})); window.__rm = mark; window.addEventListener('hashchange', mark);
-  r.onclick = e => { if (!e.target.closest('a')) r.classList.toggle('x'); else r.classList.remove('x'); };
+  const h = (location.hash || '#/').split('?')[0];
+  const ok = me && MENUS[me.role === 'student' ? 'student' : 'teacher'].some(i => i[0] === h);
+  if (!ok) { el.innerHTML = ''; document.body.classList.remove('hasrail'); return; }
+  if (!$('#rail')) applyRoleRail(h);
 }
 function footer() {
   const c = S.contact || {}, so = S.social || {};
@@ -408,11 +401,14 @@ const MENUS = {
   teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
 };
 function roleMenu(active) {
-  setTimeout(() => applyRoleRail(active), 0);
+  applyRoleRail(active);
   return '';
 }
 function applyRoleRail(active) {
-  const r = $('#rail'); if (!r || !me) return;
+  if (!me) return;
+  let el = document.getElementById('qa'); if (!el) { el = document.createElement('div'); el.id = 'qa'; document.body.appendChild(el); }
+  let r = $('#rail'); if (!r) { el.innerHTML = '<nav class="rail" id="rail"></nav>'; r = $('#rail'); r.onclick = e => { if (!e.target.closest('a')) r.classList.toggle('x'); else r.classList.remove('x'); }; }
+  document.body.classList.add('hasrail');
   const items = MENUS[me.role === 'student' ? 'student' : 'teacher'].slice();
   if (me.role === 'admin' || me.role === 'supervisor') items.push(['admin.html', '🛡️', 'لوحة الإدارة']);
   items.push(['#/login', '🚪', 'تسجيل الخروج']);
