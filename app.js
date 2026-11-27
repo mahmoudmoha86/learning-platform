@@ -374,8 +374,16 @@ const MENUS = {
   teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
 };
 function roleMenu(active) {
-  const items = MENUS[me.role === 'student' ? 'student' : 'teacher'];
-  return `<aside class="sb"><div class="sbh">🎓 ${esc(S.name || 'منصة تعلّم')}</div><div class="muted" style="margin:-8px 0 10px">${roleAr[me.role] || ''}</div>${items.map(([h, i, l]) => `<a class="sbl ${h === active ? 'on' : ''}" href="${h}">${i} ${l}</a>`).join('')}${me.role === 'admin' || me.role === 'supervisor' ? '<a class="sbl" href="admin.html">🛡️ لوحة الإدارة</a>' : ''}<a class="sbl" href="#/login" id="lo2">🚪 تسجيل الخروج</a></aside>`;
+  setTimeout(() => applyRoleRail(active), 0);
+  return '';
+}
+function applyRoleRail(active) {
+  const r = $('#rail'); if (!r || !me) return;
+  const items = MENUS[me.role === 'student' ? 'student' : 'teacher'].slice();
+  if (me.role === 'admin' || me.role === 'supervisor') items.push(['admin.html', '🛡️', 'لوحة الإدارة']);
+  items.push(['#/login', '🚪', 'تسجيل الخروج']);
+  r.innerHTML = `<a class="rlogo" href="#/"><span class="lg">🎓</span><span>${esc(S.name || 'منصة تعلّم')}</span></a>` + items.map(([h, i, l]) => `<a href="${h}" class="${h === active ? 'act' : ''}" ${h === '#/login' ? 'id="lo2"' : ''} title="${l}"><b class="ri">${i}</b><span>${l}</span></a>`).join('');
+  const o = r.querySelector('#lo2'); if (o) o.onclick = async e => { e.preventDefault(); await sb.auth.signOut(); me = null; location.hash = '#/login'; await loadMe(); header(); route(); };
 }
 function shellPage(active, inner) {
   if (needLogin()) return;
@@ -431,6 +439,7 @@ async function tPage(kind) {
   shellPage(act, html);
 }
 async function route() {
+  quick();
   const [path, q] = (location.hash.slice(1) || '/').split('?'); const p = path.split('/').filter(Boolean);
   window.scrollTo(0, 0);
   try {
