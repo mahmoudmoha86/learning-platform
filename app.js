@@ -159,17 +159,19 @@ async function course(id) {
     sb.from('lessons').select('id,title,position,video_url').eq('course_id', id).order('position'),
     sb.from('reviews').select('*,profiles(full_name,avatar_url)').eq('course_id', id).order('created_at', { ascending: false }),
     sb.from('courses').select(CSEL).eq('status', 'published').eq('category_id', c.category_id || 0).neq('id', id).limit(3)]);
-  let enr = false, mine = null;
+  let enr = false, mine = null, subOk = false;
   if (me) { const { data } = await sb.from('enrollments').select('course_id').eq('student_id', me.id).eq('course_id', id); enr = !!(data && data.length); mine = (rv || []).find(x => x.student_id === me.id); }
+  if (me && +c.price > 0) { const { data: sb2 } = await sb.from('subscriptions').select('end_date,status').or(`course_id.eq.${id},course_id.is.null`).eq('student_id', me.id).eq('status', 'active'); subOk = (sb2 || []).some(x => !x.end_date || new Date(x.end_date + 'T23:59:59') >= new Date()); }
+  const access = +c.price <= 0 || subOk || (me && (me.role === 'admin' || me.role === 'supervisor')) || (me && me.id === c.teacher_id);
   const r = avg(rv || []);
   app.innerHTML = `<div class="chead">${coverHtml(c)}<div class="cinfo"><span class="tag">${esc(catName(c.category_id))}</span> <span class="tag y">${esc(c.level || '')}</span> ${c.grade_id ? `<span class="tag">${esc(gradeName(c.grade_id))}</span> ` : ''}${c.subject_id ? `<span class="tag">${esc(subjName(c.subject_id))}</span> ` : ''}<span class="tag y">${+c.price > 0 ? esc(c.price) + ' ج.م' : 'مجاني'}</span> ${c.status !== 'published' ? `<span class="tag">${stAr[c.status]}</span>` : ''}
   <h1>${esc(c.title)}</h1><p>${esc(c.description)}</p>
   <div class="muted">${(rv || []).length ? `<span class="stars">${stars(r)}</span> ${r.toFixed(1)} (${rv.length} تقييم) · ` : ''}${(ls || []).length} درس${c.duration ? ' · ⏱ ' + esc(c.duration) : ''}</div>
   <p class="muted">المدرس: ${c.profiles ? `<a href="#/instructor/${c.profiles.id}">${esc(c.profiles.full_name)}</a>` : esc(c.instructor_name || 'فريق المنصة')}</p>
-  ${enr ? `<a class="btn" href="#/learn/${id}">تابع التعلّم</a>` : `<button class="btn y" id="en">سجّل في الكورس مجانًا</button>`}</div></div>
+  ${!access ? `<div class="box" style="background:#fff4e5"><b>🔒 الكورس مدفوع</b><p class="muted">فعّل اشتراكك مع الإدارة للوصول لكل دروس الكورس.</p><a class="btn" href="#/contact">تواصل مع الإدارة</a></div>` : enr ? `<a class="btn" href="#/learn/${id}">تابع التعلّم</a>` : `<button class="btn y" id="en">${+c.price > 0 ? 'ابدأ الكورس' : 'سجّل في الكورس مجانًا'}</button>`}</div></div>
   ${c.outcomes ? `<div class="box"><h3>ماذا ستتعلم؟</h3><ul class="chk">${c.outcomes.split('\n').filter(Boolean).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
   ${(() => { const pv = (ls || []).find(l => l.video_url); return pv ? `<div class="box"><h3>معاينة الكورس</h3>${vidHtml(pv.video_url)}</div>` : ''; })()}
-  <div class="box"><h3>محتوى الكورس (${(ls || []).length} درس)</h3>${(ls || []).map((l, i) => `<div class="ls">${i + 1}. ${esc(l.title)}</div>`).join('') || '<p class="muted">لا دروس بعد.</p>'}</div>
+  ${access ? `<div class="box"><h3>محتوى الكورس (${(ls || []).length} درس)</h3>${(ls || []).map((l, i) => `<div class="ls">${i + 1}. ${esc(l.title)}</div>`).join('') || '<p class="muted">لا دروس بعد.</p>'}</div>` : ''}
   ${c.profiles ? `<div class="box row">${avatar(c.profiles, 64)}<div><b>${esc(c.profiles.full_name)}</b><div class="muted">${esc(c.profiles.title || 'مدرس')}</div><p>${esc(c.profiles.bio || '')}</p></div></div>` : ''}
   <div class="box"><h3>التقييمات</h3>
   ${enr ? `<div class="rform"><label>تقييمك</label><select id="rt">${[5, 4, 3, 2, 1].map(n => `<option value="${n}" ${mine && mine.rating === n ? 'selected' : ''}>${'★'.repeat(n)}</option>`).join('')}</select><textarea id="rc" rows="2" placeholder="اكتب رأيك">${esc(mine?.comment || '')}</textarea><button class="btn s" id="rs">${mine ? 'تحديث تقييمي' : 'إرسال التقييم'}</button></div>` : ''}
@@ -195,6 +197,11 @@ async function progress(cid, uid) {
 async function learn(id, lid) {
   if (needLogin()) return;
   const { data: c } = await sb.from('courses').select('*').eq('id', id).single();
+  if (c && +c.price > 0 && me.role === 'student') {
+    const { data: sb3 } = await sb.from('subscriptions').select('end_date').or(`course_id.eq.${id},course_id.is.null`).eq('student_id', me.id).eq('status', 'active');
+    const okSub = (sb3 || []).some(x => !x.end_date || new Date(x.end_date + 'T23:59:59') >= new Date());
+    if (!okSub) { app.innerHTML = `<div class="box" style="text-align:center;max-width:520px;margin:40px auto"><div style="font-size:3rem">🔒</div><h2>هذا الكورس مدفوع</h2><p class="muted">فعّل اشتراكك مع الإدارة للوصول لكل دروس الكورس.</p><a class="btn" href="#/contact">تواصل مع الإدارة</a></div>`; return; }
+  }
   const { data: ls } = await sb.from('lessons').select('*').eq('course_id', id).order('position');
   const pg = await progress(id, me.id); const done = pg.set;
   const idx = Math.max(0, (ls || []).findIndex(l => l.id === lid)); const cur = (ls || [])[idx];
@@ -407,7 +414,7 @@ async function faqPage() {
 }
 
 const MENUS = {
-  student: [['#/dashboard', '🏠', 'الرئيسية'], ['#/courses', '📚', 'تصفح الكورسات'], ['#/s/courses', '🎓', 'كورساتي'], ['#/s/lectures', '🎬', 'المحاضرات'], ['#/s/exams', '📝', 'الامتحانات'], ['#/s/homework', '📚', 'الواجبات'], ['#/s/results', '📊', 'نتائجي ودرجاتي'], ['#/s/progress', '📈', 'تقدمي الدراسي'], ['#/s/certs', '🏅', 'شهاداتي'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']],
+  student: [['#/dashboard', '🏠', 'الرئيسية'], ['#/courses', '📚', 'تصفح الكورسات'], ['#/s/courses', '🎓', 'كورساتي'], ['#/s/sub', '💳', 'اشتراكي'], ['#/s/lectures', '🎬', 'المحاضرات'], ['#/s/exams', '📝', 'الامتحانات'], ['#/s/homework', '📚', 'الواجبات'], ['#/s/results', '📊', 'نتائجي ودرجاتي'], ['#/s/progress', '📈', 'تقدمي الدراسي'], ['#/s/certs', '🏅', 'شهاداتي'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']],
   teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/exams', '📝', 'الامتحانات'], ['#/t/qbank', '🏦', 'بنك الأسئلة'], ['#/t/homework', '📚', 'الواجبات'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
 };
 function roleMenu(active) {
@@ -479,8 +486,25 @@ async function sPage(kind) {
   if (kind === 'homework') { shellPage('#/s/homework', '<div id="hwr"></div>'); return hwStudent($('#hwr')); }
   const { rows, at } = await stuData(); const tt = Object.fromEntries(rows.map(r => [r.c.id, r.c.title]));
   const tbl = (h, b) => `<div class="tw"><table><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>${b || `<tr><td colspan="${h.length}" class="muted" style="text-align:center">لا توجد بيانات</td></tr>`}</table></div>`;
-  const hrefs = { courses: '#/s/courses', lectures: '#/s/lectures', exams: '#/s/exams', myexams: '#/s/myexams', homework: '#/s/homework', results: '#/s/results', progress: '#/s/progress', certs: '#/s/certs' };
+  const hrefs = { courses: '#/s/courses', sub: '#/s/sub', lectures: '#/s/lectures', exams: '#/s/exams', myexams: '#/s/myexams', homework: '#/s/homework', results: '#/s/results', progress: '#/s/progress', certs: '#/s/certs' };
   let html = '';
+  if (kind === 'sub') {
+    const [a1, a2] = await Promise.all([sb.from('subscriptions').select('*').eq('student_id', me.id).order('created_at', { ascending: false }), sb.from('transactions').select('*').eq('student_id', me.id).order('created_at', { ascending: false })]);
+    const subs = a1.data || [], trx = a2.data || [];
+    const cids = [...new Set(subs.map(x => x.course_id).filter(Boolean))];
+    const { data: cds } = cids.length ? await sb.from('courses').select('id,title').in('id', cids) : { data: [] };
+    const cn = id => (cds || []).find(c => c.id === id)?.title || 'كل الكورسات';
+    const mny = n => (+n || 0).toLocaleString('ar-EG', { maximumFractionDigits: 2 }) + ' ج.م';
+    const st = x => x.status === 'stopped' ? 'موقوف' : (x.end_date && new Date(x.end_date + 'T23:59:59') < new Date() ? 'منتهي' : 'نشط');
+    const paid = trx.filter(t => t.kind === 'payment').reduce((a, t) => a + +t.amount, 0);
+    const back = trx.filter(t => t.kind === 'refund').reduce((a, t) => a + +t.amount, 0);
+    const meth = { cash: 'نقدي', wallet: 'محفظة إلكترونية', bank: 'تحويل بنكي', other: 'أخرى' };
+    html = `<h1>اشتراكي</h1>
+    <div class="stats"><div class="stat"><b>${mny(paid)}</b>إجمالي المدفوع</div><div class="stat"><b>${mny(back)}</b>المسترد</div><div class="stat"><b>${mny(paid - back)}</b>الصافي</div><div class="stat"><b>${subs.filter(x => st(x) === 'نشط').length}</b>اشتراك نشط</div></div>
+    <h2>اشتراكاتي</h2>${subs.length ? tbl(['الكورس', 'الخطة', 'من', 'إلى', 'المبلغ', 'الحالة'], subs.map(x => `<tr><td>${esc(cn(x.course_id))}</td><td>${esc(x.plan || '-')}</td><td>${fmtDate(x.start_date)}</td><td>${x.end_date ? fmtDate(x.end_date) : 'مفتوح'}</td><td>${mny(x.amount)}</td><td><span class="tag ${st(x) === 'نشط' ? '' : 'y'}">${st(x)}</span></td></tr>`).join('')) : '<p class="muted">لا يوجد اشتراك بعد. تواصل مع الإدارة لتفعيل اشتراكك.</p><a class="btn" href="#/contact">تواصل مع الإدارة</a>'}
+    <h2>مدفوعاتي</h2>${trx.length ? tbl(['التاريخ', 'النوع', 'المبلغ', 'الطريقة', 'المرجع'], trx.map(t => `<tr><td>${fmtDate(t.created_at)}</td><td><span class="tag ${t.kind === 'refund' ? 'y' : ''}">${t.kind === 'refund' ? 'استرداد' : 'دفعة'}</span></td><td>${mny(t.amount)}</td><td>${meth[t.method] || ''}</td><td>${esc(t.reference || '-')}</td></tr>`).join('')) : '<p class="muted">لا مدفوعات بعد.</p>'}`;
+    return shellPage('#/s/sub', html);
+  }
   if (kind === 'courses') html = `<h1>كورساتي</h1>${rows.length ? `<div class="grid">${rows.map(({ c, pg }) => courseCard(c, `<div class="bar"><i style="width:${pg.pct}%"></i></div><span class="muted">${pg.pct}%</span>`, `#/learn/${c.id}`).replace('التفاصيل', 'تابع')).join('')}</div>` : '<p class="muted">لم تسجّل في أي كورس بعد.</p><a class="btn" href="#/courses">تصفح الكورسات</a>'}`;
   if (kind === 'lectures') { const out = []; for (const r of rows) { const { data: ls } = await sb.from('lessons').select('id,title,position').eq('course_id', r.c.id).order('position'); out.push(`<div class="box"><h3>${esc(r.c.title)}</h3>${(ls || []).map((l, i) => `<div class="ls"><span style="flex:1">${r.pg.set.has(l.id) ? '✅' : '⭕'} ${i + 1}. ${esc(l.title)}</span><a class="btn s o" href="#/learn/${r.c.id}/${l.id}">مشاهدة</a></div>`).join('') || '<p class="muted">لا محاضرات بعد</p>'}</div>`); } html = `<h1>المحاضرات</h1>${out.join('') || '<p class="muted">سجّل في كورس لتظهر محاضراته هنا.</p>'}`; }
   if (kind === 'exams') { const out = []; for (const r of rows) { const { count } = await sb.from('quiz_questions').select('*', { count: 'exact', head: true }).eq('course_id', r.c.id); if (count) out.push(`<tr><td>${esc(r.c.title)}</td><td>${count}</td><td>${at.filter(a => a.course_id === r.c.id).length}</td><td><a class="btn s" href="#/quiz/${r.c.id}">ابدأ الاختبار</a></td></tr>`); } html = `<h1>الامتحانات</h1>${tbl(['الكورس', 'عدد الأسئلة', 'محاولاتك', ''], out.join(''))}`; }
