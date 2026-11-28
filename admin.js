@@ -1,5 +1,5 @@
 const root = $('#root'); let me = null, cur = 'overview';
-const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['subs', '💳 إدارة الاشتراكات'], ['pay', '🧾 المدفوعات والمعاملات المالية'], ['codes', '🏷️ أكواد الخصم'], ['notifs', '🔔 الإشعارات'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['tickets', '🎫 تذاكر الدعم'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
+const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['subs', '💳 إدارة الاشتراكات'], ['pay', '🧾 المدفوعات والمعاملات المالية'], ['codes', '🏷️ أكواد الخصم'], ['notifs', '🔔 الإشعارات'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['tickets', '🎫 تذاكر الدعم'], ['reports', '📈 التقارير'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
 const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, p, v) => { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k] = a[k] || {}); a[ks.at(-1)] = v; };
 async function saveS() { const { error } = await sb.from('site_settings').upsert({ key: 'site', value: S }); toast(error ? 'فشل الحفظ: ' + error.message : 'تم الحفظ ✓'); if (!error) loadSettingsTheme(); }
@@ -48,7 +48,7 @@ function lastMonths(n) { const out = []; const d = new Date(); for (let i = n - 
 const mLabel = k => new Date(k + '-01T00:00:00').toLocaleDateString('ar-EG', { month: 'short', year: '2-digit' });
 const fmtDT = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 const PERMS = [['users', 'إدارة الطلاب والمدرسين'], ['courses', 'إدارة الكورسات والمحتوى'], ['exams', 'إدارة الامتحانات'], ['support', 'الدعم الفني والرسائل'], ['website', 'إدارة الموقع'], ['logs', 'سجل النشاطات'], ['finance', 'الحسابات المالية'], ['reports', 'التقارير']];
-const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', tickets: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', subs: 'finance', pay: 'finance', codes: 'finance', notifs: 'ADMIN', sep: null };
+const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', tickets: 'support', reports: 'reports', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', subs: 'finance', pay: 'finance', codes: 'finance', notifs: 'ADMIN', sep: null };
 const can = k => !me ? false : me.role === 'admin' || (me.role === 'supervisor' && (PERM_OF[k] === null || (PERM_OF[k] !== 'ADMIN' && me.permissions && me.permissions[PERM_OF[k]])));
 function modal(html, onReady) {
   const o = document.createElement('div'); o.className = 'mdl'; o.innerHTML = `<div class="mdb"><button class="mdx" aria-label="إغلاق">✕</button>${html}</div>`; document.body.append(o);
@@ -337,6 +337,28 @@ const pages = {
       error ? toast(error.message) : (toast('تم الحذف'), show('notifs'));
     });
   },
+  async reports() {
+    root.querySelector('#pg').innerHTML = `<h1>التقارير</h1>
+    <div class="box noprint" style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+      <div><label>التقرير</label><select id="rk" style="width:auto">${REP_KINDS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></div>
+      <div><label>من تاريخ</label><input id="rf" type="date" style="width:auto"></div>
+      <div><label>إلى تاريخ</label><input id="rt" type="date" style="width:auto"></div>
+      <button class="btn" id="rgo">عرض</button><button class="btn s o" id="rcsv">⬇️ تصدير Excel (CSV)</button><button class="btn s o" id="rpr">🖨️ طباعة / PDF</button>
+    </div>
+    <div id="rout"><p class="muted">اختر التقرير ثم اضغط عرض.</p></div>`;
+    let cur = null;
+    const run = async () => {
+      const k = $('#rk').value; $('#rout').innerHTML = '<p class="muted">جاري التحميل...</p>';
+      cur = await reportData(k, $('#rf').value, $('#rt').value);
+      $('#rout').innerHTML = `<div class="box"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${cur.title}</h3><span class="tag">${cur.rows.length} صف</span></div>
+      <div class="tw" style="margin-top:10px"><table><thead><tr>${cur.header.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${cur.rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cur.header.length}" class="muted" style="text-align:center">لا بيانات في هذه الفترة</td></tr>`}</tbody></table></div>
+      <p class="muted" style="margin:10px 0 0">${$('#rf').value || $('#rt').value ? `الفترة: ${$('#rf').value || 'البداية'} إلى ${$('#rt').value || 'الآن'}` : 'كل الفترات'}</p></div>`;
+    };
+    $('#rgo').onclick = run;
+    $('#rcsv').onclick = () => { if (!cur) return toast('اعرض التقرير أولا'); downloadCsv(`report-${$('#rk').value}-${todayISO()}.csv`, cur.header, cur.rows); toast('تم تنزيل الملف ✓'); };
+    $('#rpr').onclick = () => { if (!cur) return toast('اعرض التقرير أولا'); window.print(); };
+    await run();
+  },
   async tickets() {
     const { data } = await sb.from('tickets').select('*,profiles!user_id(full_name,role)').order('updated_at', { ascending: false });
     const rows = data || [];
@@ -354,6 +376,48 @@ const pages = {
   }
 };
 const TK_ST = { open: 'مفتوحة', answered: 'تم الرد', closed: 'مغلقة' };
+function downloadCsv(name, header, rows) {
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const csv = '\uFEFF' + [header.map(q).join(','), ...rows.map(r => r.map(q).join(','))].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+const REP_KINDS = [['students', 'الطلاب والمدرسون'], ['enrollments', 'التسجيلات'], ['courses', 'الكورسات'], ['subs', 'الاشتراكات'], ['pay', 'المدفوعات'], ['exams', 'نتائج الامتحانات']];
+async function reportData(kind, from, to) {
+  const inR = d => (!from || String(d || '').slice(0, 10) >= from) && (!to || String(d || '').slice(0, 10) <= to);
+  const day = d => d ? fmtDate(d) : '-';
+  if (kind === 'students') {
+    const [{ data: ps }, { data: en }] = await Promise.all([sb.rpc('admin_profiles'), sb.from('enrollments').select('student_id')]);
+    const c = {}; (en || []).forEach(e => c[e.student_id] = (c[e.student_id] || 0) + 1);
+    const rows = (ps || []).filter(p => ['student', 'teacher'].includes(p.role)).filter(p => inR(p.created_at)).map(p => [p.full_name || '', roleAr[p.role] || p.role, p.email || '', p.phone || '', p.suspended ? 'موقوف' : 'نشط', p.approved === false ? 'بانتظار الموافقة' : 'مقبول', c[p.id] || 0, day(p.created_at)]);
+    return { title: 'الطلاب والمدرسون', header: ['الاسم', 'الدور', 'البريد', 'الهاتف', 'الحالة', 'الموافقة', 'عدد التسجيلات', 'تاريخ التسجيل'], rows };
+  }
+  if (kind === 'enrollments') {
+    const { data } = await sb.from('enrollments').select('created_at,student_id,course_id,profiles!student_id(full_name),courses(title)');
+    const rows = (data || []).filter(e => inR(e.created_at)).map(e => [e.profiles?.full_name || '', e.courses?.title || '', day(e.created_at)]);
+    return { title: 'التسجيلات', header: ['الطالب', 'الكورس', 'التاريخ'], rows };
+  }
+  if (kind === 'courses') {
+    const [{ data: cs }, { data: ls }, { data: en }] = await Promise.all([sb.from('courses').select('id,title,price,status,created_at,profiles!teacher_id(full_name)'), sb.from('lessons').select('course_id'), sb.from('enrollments').select('course_id')]);
+    const lc = {}, ec = {}; (ls || []).forEach(l => lc[l.course_id] = (lc[l.course_id] || 0) + 1); (en || []).forEach(e => ec[e.course_id] = (ec[e.course_id] || 0) + 1);
+    const rows = (cs || []).filter(c => inR(c.created_at)).map(c => [c.title, c.profiles?.full_name || '', +c.price > 0 ? c.price + ' ج.م' : 'مجاني', stAr[c.status] || c.status, lc[c.id] || 0, ec[c.id] || 0, day(c.created_at)]);
+    return { title: 'الكورسات', header: ['الكورس', 'المدرس', 'السعر', 'الحالة', 'عدد الدروس', 'عدد التسجيلات', 'تاريخ الإنشاء'], rows };
+  }
+  if (kind === 'subs') {
+    const { data } = await sb.from('subscriptions').select('*,profiles!student_id(full_name),courses(title)').order('created_at', { ascending: false });
+    const rows = (data || []).filter(x => inR(x.created_at)).map(x => [x.profiles?.full_name || '', x.courses?.title || 'كل الكورسات', x.plan || '-', day(x.start_date), x.end_date ? day(x.end_date) : 'مفتوح', +x.amount, subAr[subSt(x)] || '', x.code || '']);
+    return { title: 'الاشتراكات', header: ['الطالب', 'الكورس', 'الخطة', 'من', 'إلى', 'المبلغ', 'الحالة', 'كود الخصم'], rows };
+  }
+  if (kind === 'pay') {
+    const { data } = await sb.from('transactions').select('*,profiles!student_id(full_name)').order('created_at', { ascending: false });
+    const rows = (data || []).filter(x => inR(x.created_at)).map(x => [day(x.created_at), x.profiles?.full_name || '', x.kind === 'refund' ? 'استرداد' : 'دفعة', +x.amount, payMethodAr[x.method] || x.method, x.reference || '', x.note || '']);
+    return { title: 'المدفوعات', header: ['التاريخ', 'الطالب', 'النوع', 'المبلغ', 'الطريقة', 'المرجع', 'ملاحظة'], rows };
+  }
+  const { data: at } = await sb.from('exam_attempts').select('*,profiles!student_id(full_name),exams(title)').order('started_at', { ascending: false });
+  const rows = (at || []).filter(a => a.submitted_at).filter(a => inR(a.submitted_at)).map(a => [a.profiles?.full_name || '', a.exams?.title || '', a.score, a.total, a.total ? Math.round(a.score / a.total * 100) + '%' : '-', a.passed ? 'ناجح' : 'راسب', day(a.submitted_at)]);
+  return { title: 'نتائج الامتحانات', header: ['الطالب', 'الامتحان', 'الدرجة', 'من', 'النسبة', 'النتيجة', 'تاريخ التسليم'], rows };
+}
 const TK_PR = { low: 'منخفضة', normal: 'عادية', high: 'عاجلة' };
 async function ticketView(t, done) {
   const { data } = await sb.from('ticket_messages').select('*').eq('ticket_id', t.id).order('created_at');

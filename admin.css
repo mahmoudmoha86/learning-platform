@@ -27,3 +27,4 @@ th{background:#fdeaea;color:var(--p2)}table{border-radius:12px}
 th[data-s] i{font-style:normal;font-size:.7rem;color:var(--p)}
 .tw{overflow-x:auto}
 .sepl{margin:14px 12px 4px;font-size:.8rem;color:#98a2b3;font-weight:700}
+@media print{.side,.tb,.noprint{display:none!important}.mw{margin:0}.cont{padding:0}}
