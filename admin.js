@@ -1,5 +1,5 @@
 const root = $('#root'); let me = null, cur = 'overview';
-const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['subs', '💳 إدارة الاشتراكات'], ['pay', '🧾 المدفوعات والمعاملات المالية'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
+const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['subs', '💳 إدارة الاشتراكات'], ['pay', '🧾 المدفوعات والمعاملات المالية'], ['codes', '🏷️ أكواد الخصم'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
 const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, p, v) => { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k] = a[k] || {}); a[ks.at(-1)] = v; };
 async function saveS() { const { error } = await sb.from('site_settings').upsert({ key: 'site', value: S }); toast(error ? 'فشل الحفظ: ' + error.message : 'تم الحفظ ✓'); if (!error) loadSettingsTheme(); }
@@ -42,7 +42,7 @@ function tableEditor(table, title, fields, order = 'position') { // fields: [key
 }
 const fmtDT = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 const PERMS = [['users', 'إدارة الطلاب والمدرسين'], ['courses', 'إدارة الكورسات والمحتوى'], ['exams', 'إدارة الامتحانات'], ['support', 'الدعم الفني والرسائل'], ['website', 'إدارة الموقع'], ['logs', 'سجل النشاطات'], ['finance', 'الحسابات المالية'], ['reports', 'التقارير']];
-const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', subs: 'finance', pay: 'finance', sep: null };
+const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', subs: 'finance', pay: 'finance', codes: 'finance', sep: null };
 const can = k => !me ? false : me.role === 'admin' || (me.role === 'supervisor' && (PERM_OF[k] === null || (PERM_OF[k] !== 'ADMIN' && me.permissions && me.permissions[PERM_OF[k]])));
 function modal(html, onReady) {
   const o = document.createElement('div'); o.className = 'mdl'; o.innerHTML = `<div class="mdb"><button class="mdx" aria-label="إغلاق">✕</button>${html}</div>`; document.body.append(o);
@@ -288,6 +288,21 @@ const pages = {
         if (a === 'f') return trxForm(ps, subs, () => show('pay'), { student_id: r.student_id, subscription_id: r.subscription_id, amount: r.amount, method: r.method, kind: 'refund', reference: r.reference, note: r.note });
         if (a === 'x') { if (!confirm('حذف المعاملة؟')) return; const { error } = await sb.from('transactions').delete().eq('id', r.id); error ? toast(error.message) : (toast('تم الحذف'), show('pay')); }
       } });
+  },
+  async codes() {
+    const { data } = await sb.from('discount_codes').select('*').order('created_at', { ascending: false });
+    const rows = data || [];
+    dtable({ title: 'أكواد الخصم', rows, search: r => `${r.code} ${r.note || ''}`,
+      filters: [{ l: 'الحالة', opts: [['a', 'مفعّل'], ['i', 'موقوف']], f: (r, v) => v === 'a' ? r.active : !r.active }],
+      cols: [{ l: 'الكود', v: r => `<b>${esc(r.code)}</b>`, s: r => r.code }, { l: 'النوع', v: r => r.kind === 'percent' ? 'نسبة' : 'مبلغ ثابت', s: r => r.kind }, { l: 'القيمة', v: r => r.kind === 'percent' ? r.value + '%' : money(r.value), s: r => +r.value }, { l: 'الاستخدام', v: r => `${r.used} / ${r.max_uses > 0 ? r.max_uses : '∞'}`, s: r => r.used }, { l: 'ينتهي', v: r => r.expires_at ? fmtDate(r.expires_at) : '-', s: r => r.expires_at || '' }, { l: 'الحالة', v: r => `<span class="tag ${r.active ? '' : 'y'}">${r.active ? 'مفعّل' : 'موقوف'}</span>`, s: r => r.active ? 1 : 0 }, { l: 'ملاحظة', v: r => esc(r.note || '-'), s: r => r.note || '' }],
+      add: '<button class="btn y" id="addu">+ كود جديد</button>',
+      onReady: b => b.querySelector('#addu').onclick = () => codeForm(null, () => show('codes')),
+      actions: r => [['e', 'تعديل'], r.active ? ['t', 'إيقاف', 'o'] : ['t', 'تفعيل', 'y'], ['x', 'حذف', 'r']],
+      onAct: async (a, r) => {
+        if (a === 'e') return codeForm(r, () => show('codes'));
+        if (a === 't') { const { error } = await sb.from('discount_codes').update({ active: !r.active }).eq('id', r.id); error ? toast(error.message) : (toast('تم ✓'), show('codes')); return; }
+        if (a === 'x') { if (!confirm('حذف الكود؟')) return; const { error } = await sb.from('discount_codes').delete().eq('id', r.id); error ? toast(error.message) : (toast('تم الحذف'), show('codes')); }
+      } });
   }
 };
 const money = n => (+n || 0).toLocaleString('ar-EG', { maximumFractionDigits: 2 }) + ' ج.م';
@@ -304,6 +319,29 @@ async function finData() {
   ]);
   return { ps: a.data || [], cs: b.data || [], subs: c.data || [], trx: d.data || [] };
 }
+function codeForm(d, done) {
+  const isNew = !d;
+  modal(`<h2>${isNew ? 'كود خصم جديد' : 'تعديل الكود'}</h2>
+  <label>الكود</label><input id="cc" value="${esc(d?.code || '')}" dir="ltr" placeholder="SUMMER10">
+  <div class="two"><div><label>النوع</label><select id="ck"><option value="percent" ${d?.kind === 'percent' ? 'selected' : ''}>نسبة %</option><option value="fixed" ${d?.kind === 'fixed' ? 'selected' : ''}>مبلغ ثابت</option></select></div><div><label>القيمة</label><input id="cv" type="number" min="0" step="0.01" value="${d ? +d.value : ''}"></div></div>
+  <div class="two"><div><label>أقصى عدد استخدامات (0 = بلا حد)</label><input id="cm" type="number" min="0" value="${d ? d.max_uses : 0}"></div><div><label>ينتهي في (اختياري)</label><input id="ce" type="date" value="${d?.expires_at || ''}"></div></div>
+  <label>ملاحظة</label><input id="cn" value="${esc(d?.note || '')}">
+  <label><input type="checkbox" id="ca" ${!d || d.active ? 'checked' : ''} style="width:auto;margin:0 0 0 6px">مفعّل</label>
+  <button class="btn" id="csv" style="margin-top:12px">حفظ</button>`, (o, close) => {
+    o.querySelector('#csv').onclick = async () => {
+      const code = o.querySelector('#cc').value.trim().toUpperCase();
+      const val = +o.querySelector('#cv').value;
+      if (!code) return toast('اكتب الكود');
+      if (!(val > 0)) return toast('اكتب القيمة');
+      if (o.querySelector('#ck').value === 'percent' && val > 100) return toast('النسبة لا تزيد عن 100');
+      const row = { code, kind: o.querySelector('#ck').value, value: val, max_uses: Math.max(0, +o.querySelector('#cm').value || 0), expires_at: o.querySelector('#ce').value || null, active: o.querySelector('#ca').checked, note: o.querySelector('#cn').value.trim() };
+      if (isNew) row.created_by = me.id;
+      const { error } = isNew ? await sb.from('discount_codes').insert(row) : await sb.from('discount_codes').update(row).eq('id', d.id);
+      if (error) return toast(error.message);
+      toast('تم الحفظ ✓'); close(); done();
+    };
+  });
+}
 function subForm(s, ps, cs, done) {
   const isNew = !s;
   modal(`<h2>${isNew ? 'اشتراك يدوي' : 'تعديل الاشتراك'}</h2>
@@ -312,13 +350,31 @@ function subForm(s, ps, cs, done) {
   <label>اسم الخطة</label><input id="sp" value="${esc(s?.plan || '')}" placeholder="مثال: اشتراك شهري">
   <div class="two"><div><label>من</label><input id="sd" type="date" value="${s?.start_date || todayISO()}"></div><div><label>إلى (اتركه فاضي = مفتوح)</label><input id="se" type="date" value="${s?.end_date || ''}"></div></div>
   <div class="two"><div><label>المبلغ</label><input id="sa" type="number" min="0" step="0.01" value="${s ? +s.amount : 0}"></div><div><label>ملاحظة</label><input id="sn" value="${esc(s?.note || '')}"></div></div>
+  <label>كود خصم (اختياري)</label><div class="row"><input id="sco" value="${esc(s?.code || '')}" dir="ltr"><button type="button" class="btn s o" id="sap">تطبيق</button></div><div id="sinfo" class="muted"></div>
   <button class="btn" id="sv" style="margin-top:12px">حفظ</button>`, (o, close) => {
+    const ap = o.querySelector('#sap');
+    if (ap) ap.onclick = async () => {
+      const code = (o.querySelector('#sco').value || '').trim().toUpperCase(); const base = +o.querySelector('#sa').value || 0;
+      const inf = o.querySelector('#sinfo');
+      if (!code) { inf.textContent = ''; return; }
+      const { data: cd } = await sb.from('discount_codes').select('*').eq('code', code).maybeSingle();
+      if (!cd) { inf.textContent = 'الكود غير موجود'; return; }
+      if (!cd.active) { inf.textContent = 'الكود موقوف'; return; }
+      if (cd.expires_at && new Date(cd.expires_at + 'T23:59:59') < new Date()) { inf.textContent = 'انتهت صلاحية الكود'; return; }
+      if (cd.max_uses > 0 && cd.used >= cd.max_uses) { inf.textContent = 'انتهى عدد استخدامات الكود'; return; }
+      const off = cd.kind === 'percent' ? Math.round(base * cd.value) / 100 : +cd.value;
+      const fin = Math.max(0, base - off);
+      o.querySelector('#sa').value = fin;
+      inf.textContent = `الخصم ${money(off)} — الإجمالي بعد الخصم ${money(fin)}`;
+    };
     o.querySelector('#sv').onclick = async () => {
       const row = { student_id: o.querySelector('#ss').value, course_id: o.querySelector('#sc').value || null, plan: o.querySelector('#sp').value.trim(), start_date: o.querySelector('#sd').value || todayISO(), end_date: o.querySelector('#se').value || null, amount: +o.querySelector('#sa').value || 0, note: o.querySelector('#sn').value.trim() };
       if (!row.student_id) return toast('اختر الطالب');
+      row.code = (o.querySelector('#sco').value || '').trim().toUpperCase();
       if (isNew) row.created_by = me.id;
       const { error } = isNew ? await sb.from('subscriptions').insert(row) : await sb.from('subscriptions').update(row).eq('id', s.id);
       if (error) return toast(error.message);
+      if (isNew && row.code) { const { data: cd } = await sb.from('discount_codes').select('id,used').eq('code', row.code).maybeSingle(); if (cd) await sb.from('discount_codes').update({ used: cd.used + 1 }).eq('id', cd.id); }
       toast('تم الحفظ ✓'); close(); done();
     };
   });
