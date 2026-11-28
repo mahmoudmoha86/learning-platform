@@ -1,5 +1,5 @@
 const root = $('#root'); let me = null, cur = 'overview';
-const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
+const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['subs', '💳 إدارة الاشتراكات'], ['pay', '🧾 المدفوعات والمعاملات المالية'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
 const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, p, v) => { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k] = a[k] || {}); a[ks.at(-1)] = v; };
 async function saveS() { const { error } = await sb.from('site_settings').upsert({ key: 'site', value: S }); toast(error ? 'فشل الحفظ: ' + error.message : 'تم الحفظ ✓'); if (!error) loadSettingsTheme(); }
@@ -42,7 +42,7 @@ function tableEditor(table, title, fields, order = 'position') { // fields: [key
 }
 const fmtDT = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 const PERMS = [['users', 'إدارة الطلاب والمدرسين'], ['courses', 'إدارة الكورسات والمحتوى'], ['exams', 'إدارة الامتحانات'], ['support', 'الدعم الفني والرسائل'], ['website', 'إدارة الموقع'], ['logs', 'سجل النشاطات'], ['finance', 'الحسابات المالية'], ['reports', 'التقارير']];
-const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', sep: null };
+const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', subs: 'finance', pay: 'finance', sep: null };
 const can = k => !me ? false : me.role === 'admin' || (me.role === 'supervisor' && (PERM_OF[k] === null || (PERM_OF[k] !== 'ADMIN' && me.permissions && me.permissions[PERM_OF[k]])));
 function modal(html, onReady) {
   const o = document.createElement('div'); o.className = 'mdl'; o.innerHTML = `<div class="mdb"><button class="mdx" aria-label="إغلاق">✕</button>${html}</div>`; document.body.append(o);
@@ -254,8 +254,95 @@ const pages = {
     $('#mu').onchange = async e => { for (const f of e.target.files) await uploadImage(f, 'admin'); show('media'); };
     $$('[data-cp]').forEach(b => b.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(b.dataset.cp); toast('تم نسخ الرابط'); });
     $$('[data-dp]').forEach(b => b.onclick = async () => { if (confirm('حذف الصورة؟')) { await sb.storage.from('media').remove([b.dataset.dp]); show('media'); } });
+  },
+  async subs() {
+    const { ps, cs, subs } = await finData();
+    const nm = id => (ps.find(p => p.id === id) || {}).full_name || '-';
+    const cn = id => (cs.find(c => c.id === id) || {}).title || 'كل الكورسات';
+    const rows = subs.map(s => ({ ...s, st: subSt(s) }));
+    dtable({ title: 'الاشتراكات', rows, search: r => `${nm(r.student_id)} ${cn(r.course_id)} ${r.plan || ''}`,
+      filters: [{ l: 'الحالة', opts: [['a', 'نشط'], ['e', 'منتهي'], ['s', 'موقوف']], f: (r, v) => v === 'a' ? r.st === 'active' : v === 'e' ? r.st === 'expired' : r.st === 'stopped' }],
+      cols: [{ l: 'الطالب', v: r => esc(nm(r.student_id)), s: r => nm(r.student_id) }, { l: 'الكورس', v: r => esc(cn(r.course_id)), s: r => cn(r.course_id) }, { l: 'الخطة', v: r => esc(r.plan || '-'), s: r => r.plan || '' }, { l: 'من', v: r => fmtDate(r.start_date), s: r => r.start_date }, { l: 'إلى', v: r => r.end_date ? fmtDate(r.end_date) : 'مفتوح', s: r => r.end_date || '' }, { l: 'المبلغ', v: r => money(r.amount), s: r => +r.amount }, { l: 'الحالة', v: r => `<span class="tag ${r.st === 'active' ? '' : 'y'}">${subAr[r.st]}</span>`, s: r => r.st }],
+      add: '<button class="btn y" id="addu">+ اشتراك يدوي</button>',
+      onReady: b => b.querySelector('#addu').onclick = () => subForm(null, ps, cs, () => show('subs')),
+      actions: r => [['r', 'تجديد', 'y'], ['e', 'تعديل'], r.status === 'stopped' ? ['t', 'تفعيل', 'y'] : ['t', 'إيقاف', 'o'], ['x', 'حذف', 'r']],
+      onAct: async (a, r) => {
+        if (a === 'e') return subForm(r, ps, cs, () => show('subs'));
+        if (a === 'r') { const b = r.end_date && new Date(r.end_date + 'T23:59:59') > new Date() ? new Date(r.end_date) : new Date(); b.setDate(b.getDate() + 30); const { error } = await sb.from('subscriptions').update({ end_date: b.toISOString().slice(0, 10), status: 'active' }).eq('id', r.id); error ? toast(error.message) : (toast('تم التجديد 30 يوم ✓'), show('subs')); return; }
+        if (a === 't') { const { error } = await sb.from('subscriptions').update({ status: r.status === 'stopped' ? 'active' : 'stopped' }).eq('id', r.id); error ? toast(error.message) : (toast('تم ✓'), show('subs')); return; }
+        if (a === 'x') { if (!confirm('حذف الاشتراك؟')) return; const { error } = await sb.from('subscriptions').delete().eq('id', r.id); error ? toast(error.message) : (toast('تم الحذف'), show('subs')); }
+      } });
+  },
+  async pay() {
+    const { ps, subs, trx } = await finData();
+    const nm = id => (ps.find(p => p.id === id) || {}).full_name || '-';
+    const paid = trx.filter(t => t.kind === 'payment').reduce((a, t) => a + +t.amount, 0);
+    const back = trx.filter(t => t.kind === 'refund').reduce((a, t) => a + +t.amount, 0);
+    dtable({ title: 'المدفوعات والمعاملات المالية', rows: trx, search: r => `${nm(r.student_id)} ${r.reference || ''} ${r.note || ''}`,
+      filters: [{ l: 'النوع', opts: [['p', 'مدفوعات'], ['r', 'استرداد']], f: (r, v) => v === 'p' ? r.kind === 'payment' : r.kind === 'refund' }, { l: 'الطريقة', opts: Object.entries(payMethodAr), f: (r, v) => r.method === v }],
+      cols: [{ l: 'التاريخ', v: r => fmtDT(r.created_at), s: r => r.created_at }, { l: 'الطالب', v: r => esc(nm(r.student_id)), s: r => nm(r.student_id) }, { l: 'النوع', v: r => `<span class="tag ${r.kind === 'refund' ? 'y' : ''}">${r.kind === 'refund' ? 'استرداد' : 'دفعة'}</span>`, s: r => r.kind }, { l: 'المبلغ', v: r => money(r.amount), s: r => +r.amount }, { l: 'الطريقة', v: r => payMethodAr[r.method] || esc(r.method), s: r => r.method }, { l: 'المرجع', v: r => esc(r.reference || '-'), s: r => r.reference || '' }, { l: 'ملاحظة', v: r => esc(r.note || '-'), s: r => r.note || '' }],
+      add: `<span class="tag">مدفوعات: ${money(paid)}</span> <span class="tag y">استرداد: ${money(back)}</span> <span class="tag">الصافي: ${money(paid - back)}</span> <button class="btn y" id="addu">+ تسجيل دفعة</button>`,
+      onReady: b => b.querySelector('#addu').onclick = () => trxForm(ps, subs, () => show('pay')),
+      actions: r => r.kind === 'payment' ? [['f', 'استرداد', 'o'], ['x', 'حذف', 'r']] : [['x', 'حذف', 'r']],
+      onAct: async (a, r) => {
+        if (a === 'f') return trxForm(ps, subs, () => show('pay'), { student_id: r.student_id, subscription_id: r.subscription_id, amount: r.amount, method: r.method, kind: 'refund', reference: r.reference, note: r.note });
+        if (a === 'x') { if (!confirm('حذف المعاملة؟')) return; const { error } = await sb.from('transactions').delete().eq('id', r.id); error ? toast(error.message) : (toast('تم الحذف'), show('pay')); }
+      } });
   }
 };
+const money = n => (+n || 0).toLocaleString('ar-EG', { maximumFractionDigits: 2 }) + ' ج.م';
+const payMethodAr = { cash: 'نقدي', wallet: 'محفظة إلكترونية', bank: 'تحويل بنكي', other: 'أخرى' };
+const subAr = { active: 'نشط', stopped: 'موقوف', expired: 'منتهي' };
+const subSt = s => s.status === 'stopped' ? 'stopped' : (s.end_date && new Date(s.end_date + 'T23:59:59') < new Date() ? 'expired' : 'active');
+const todayISO = () => new Date().toISOString().slice(0, 10);
+async function finData() {
+  const [a, b, c, d] = await Promise.all([
+    sb.from('profiles').select('id,full_name,role').eq('role', 'student').order('full_name'),
+    sb.from('courses').select('id,title').order('title'),
+    sb.from('subscriptions').select('*').order('created_at', { ascending: false }),
+    sb.from('transactions').select('*').order('created_at', { ascending: false })
+  ]);
+  return { ps: a.data || [], cs: b.data || [], subs: c.data || [], trx: d.data || [] };
+}
+function subForm(s, ps, cs, done) {
+  const isNew = !s;
+  modal(`<h2>${isNew ? 'اشتراك يدوي' : 'تعديل الاشتراك'}</h2>
+  <label>الطالب</label><select id="ss">${ps.map(p => `<option value="${p.id}" ${s && s.student_id === p.id ? 'selected' : ''}>${esc(p.full_name)}</option>`).join('') || '<option value="">لا طلاب</option>'}</select>
+  <label>الكورس (اختياري: بدون اختيار = كل الكورسات)</label><select id="sc"><option value="">كل الكورسات</option>${cs.map(c => `<option value="${c.id}" ${s && s.course_id === c.id ? 'selected' : ''}>${esc(c.title)}</option>`).join('')}</select>
+  <label>اسم الخطة</label><input id="sp" value="${esc(s?.plan || '')}" placeholder="مثال: اشتراك شهري">
+  <div class="two"><div><label>من</label><input id="sd" type="date" value="${s?.start_date || todayISO()}"></div><div><label>إلى (اتركه فاضي = مفتوح)</label><input id="se" type="date" value="${s?.end_date || ''}"></div></div>
+  <div class="two"><div><label>المبلغ</label><input id="sa" type="number" min="0" step="0.01" value="${s ? +s.amount : 0}"></div><div><label>ملاحظة</label><input id="sn" value="${esc(s?.note || '')}"></div></div>
+  <button class="btn" id="sv" style="margin-top:12px">حفظ</button>`, (o, close) => {
+    o.querySelector('#sv').onclick = async () => {
+      const row = { student_id: o.querySelector('#ss').value, course_id: o.querySelector('#sc').value || null, plan: o.querySelector('#sp').value.trim(), start_date: o.querySelector('#sd').value || todayISO(), end_date: o.querySelector('#se').value || null, amount: +o.querySelector('#sa').value || 0, note: o.querySelector('#sn').value.trim() };
+      if (!row.student_id) return toast('اختر الطالب');
+      if (isNew) row.created_by = me.id;
+      const { error } = isNew ? await sb.from('subscriptions').insert(row) : await sb.from('subscriptions').update(row).eq('id', s.id);
+      if (error) return toast(error.message);
+      toast('تم الحفظ ✓'); close(); done();
+    };
+  });
+}
+function trxForm(ps, subs, done, base) {
+  const r = base || {};
+  modal(`<h2>${r.kind === 'refund' ? 'تسجيل استرداد' : 'تسجيل دفعة'}</h2>
+  <label>الطالب</label><select id="ts">${ps.map(p => `<option value="${p.id}" ${r.student_id === p.id ? 'selected' : ''}>${esc(p.full_name)}</option>`).join('') || '<option value="">لا طلاب</option>'}</select>
+  <label>الاشتراك (اختياري)</label><select id="tb"><option value="">بدون اشتراك</option>${subs.map(s => `<option value="${s.id}" ${r.subscription_id === s.id ? 'selected' : ''}>${esc((ps.find(p => p.id === s.student_id) || {}).full_name || '-')} · ${esc(s.plan || 'اشتراك')} · ${s.end_date ? fmtDate(s.end_date) : 'مفتوح'}</option>`).join('')}</select>
+  <div class="two"><div><label>المبلغ</label><input id="ta" type="number" min="0" step="0.01" value="${r.amount ?? ''}"></div><div><label>طريقة الدفع</label><select id="tm">${Object.entries(payMethodAr).map(([k, v]) => `<option value="${k}" ${r.method === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div></div>
+  <label>رقم الإيصال / المرجع</label><input id="tr" value="${esc(r.reference || '')}">
+  <label>ملاحظة</label><input id="tn" value="${esc(r.note || '')}">
+  <button class="btn" id="tv" style="margin-top:12px">حفظ</button>`, (o, close) => {
+    o.querySelector('#tv').onclick = async () => {
+      const amt = +o.querySelector('#ta').value;
+      if (!o.querySelector('#ts').value) return toast('اختر الطالب');
+      if (!(amt > 0)) return toast('اكتب المبلغ');
+      const row = { student_id: o.querySelector('#ts').value, subscription_id: o.querySelector('#tb').value || null, kind: r.kind === 'refund' ? 'refund' : 'payment', amount: amt, method: o.querySelector('#tm').value, reference: o.querySelector('#tr').value.trim(), note: o.querySelector('#tn').value.trim(), created_by: me.id };
+      const { error } = await sb.from('transactions').insert(row);
+      if (error) return toast(error.message);
+      toast('تم التسجيل ✓'); close(); done();
+    };
+  });
+}
 async function show(k) {
   cur = k; location.hash = k;
   $$('.side a[data-k]').forEach(a => a.classList.toggle('on', a.dataset.k === k));
