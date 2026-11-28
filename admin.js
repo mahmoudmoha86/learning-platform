@@ -40,6 +40,12 @@ function tableEditor(table, title, fields, order = 'position') { // fields: [key
     $('#add').onclick = async () => { const o = fields.some(f => f[0] === 'position') ? { position: (data || []).length + 1 } : {}; fields.forEach(([k, , t]) => { if (t !== 'img' && k !== 'position') o[k] = k === 'name' || k === 'q' ? 'جديد' : ''; }); const { error } = await sb.from(table).insert(o); if (error) toast(error.message); draw(); };
   }; draw();
 }
+function chartBars(title, rows, fmt, note) {
+  const max = Math.max(1, ...rows.map(r => r.v));
+  return `<div class="box"><h3 style="margin-top:0">${title}</h3>${rows.map(r => `<div class="row" style="gap:8px;margin:7px 0"><span class="muted" style="min-width:96px;font-size:.85rem">${esc(r.l)}</span><div style="flex:1;background:#f1f2f4;border-radius:6px;height:14px;overflow:hidden"><i style="display:block;height:100%;width:${Math.max(r.v ? 3 : 0, Math.round(r.v / max * 100))}%;background:var(--p);border-radius:6px"></i></div><b style="min-width:54px;font-size:.85rem">${fmt ? fmt(r.v) : r.v}</b></div>`).join('') || '<p class="muted">لا بيانات بعد.</p>'}${note ? `<p class="muted" style="margin:8px 0 0;font-size:.8rem">${note}</p>` : ''}</div>`;
+}
+function lastMonths(n) { const out = []; const d = new Date(); for (let i = n - 1; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); out.push(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`); } return out; }
+const mLabel = k => new Date(k + '-01T00:00:00').toLocaleDateString('ar-EG', { month: 'short', year: '2-digit' });
 const fmtDT = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 const PERMS = [['users', 'إدارة الطلاب والمدرسين'], ['courses', 'إدارة الكورسات والمحتوى'], ['exams', 'إدارة الامتحانات'], ['support', 'الدعم الفني والرسائل'], ['website', 'إدارة الموقع'], ['logs', 'سجل النشاطات'], ['finance', 'الحسابات المالية'], ['reports', 'التقارير']];
 const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', tickets: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', subs: 'finance', pay: 'finance', codes: 'finance', notifs: 'ADMIN', sep: null };
@@ -144,9 +150,21 @@ const pages = {
     const cnt = async (t, f) => { let q = sb.from(t).select('created_at', { count: 'exact', head: true }); if (f) q = q.eq(...f); return (await q).count || 0; };
     const [st, te, co, pe, en, ms, rv] = await Promise.all([cnt('profiles', ['role', 'student']), cnt('profiles', ['role', 'teacher']), cnt('courses', ['status', 'published']), cnt('courses', ['status', 'pending']), cnt('enrollments'), cnt('messages', ['is_read', false]), cnt('reviews')]);
     const [{ data: us }, { data: pend }] = await Promise.all([sb.from('profiles').select('full_name,role,created_at').order('created_at', { ascending: false }).limit(6), sb.from('courses').select('id,title').eq('status', 'pending')]);
+    const [pu, en2, trx2] = await Promise.all([
+      sb.from('profiles').select('created_at,role'),
+      sb.from('enrollments').select('course_id,courses(title)'),
+      sb.from('transactions').select('kind,amount,created_at')
+    ]);
+    const months = lastMonths(6);
+    const regRows = months.map(k => ({ l: mLabel(k), v: (pu.data || []).filter(x => String(x.created_at).slice(0, 7) === k && x.role !== 'admin' && x.role !== 'supervisor').length }));
+    const byCourse = {}; (en2.data || []).forEach(e => { const t = (e.courses && e.courses.title) || 'كورس محذوف'; byCourse[t] = (byCourse[t] || 0) + 1; });
+    const courseRows = Object.entries(byCourse).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([l, v]) => ({ l, v }));
+    const revRows = months.map(k => ({ l: mLabel(k), v: Math.round((trx2.data || []).filter(t => String(t.created_at).slice(0, 7) === k).reduce((a, t) => a + (t.kind === 'refund' ? -(+t.amount) : +t.amount), 0)) }));
+    const chartsHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:12px">${chartBars('المسجلون الجدد (6 شهور)', regRows)}${chartBars('التسجيلات حسب الكورس', courseRows, null, 'أعلى 6 كورسات')}${chartBars('المدفوعات الشهرية', revRows, v => money(v))}</div>`;
     root.querySelector('#pg').innerHTML = `<h1>نظرة عامة</h1><div class="stats">${[[st, 'طلاب'], [te, 'مدرسون'], [co, 'كورسات منشورة'], [pe, 'بانتظار الموافقة'], [en, 'تسجيلات'], [ms, 'رسائل جديدة'], [rv, 'تقييمات']].map(([n, l]) => `<div class="stat"><b>${n}</b>${l}</div>`).join('')}</div>
     <div class="box"><h3>كورسات بانتظار الموافقة</h3>${(pend || []).map(c => `<div class="lrow"><b>${esc(c.title)}</b><a class="btn s o" href="index.html#/edit/${c.id}">مراجعة</a><button class="btn s y" data-pub="${c.id}">نشر</button></div>`).join('') || '<p class="muted">لا يوجد.</p>'}</div>
     <div class="box"><h3>أحدث المسجلين</h3>${(us || []).map(u => `<div class="muted">${esc(u.full_name)} · ${roleAr[u.role]} · ${fmtDate(u.created_at)}</div>`).join('')}</div>
+    ${chartsHtml}
     <p><a class="btn" href="index.html" target="_blank">فتح الموقع ↗</a></p>`;
     $$('[data-pub]').forEach(b => b.onclick = async () => { await sb.from('courses').update({ status: 'published' }).eq('id', b.dataset.pub); show('overview'); });
   },
