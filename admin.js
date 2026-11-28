@@ -1,5 +1,5 @@
 const root = $('#root'); let me = null, cur = 'overview';
-const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['subs', '💳 إدارة الاشتراكات'], ['pay', '🧾 المدفوعات والمعاملات المالية'], ['codes', '🏷️ أكواد الخصم'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
+const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['subs', '💳 إدارة الاشتراكات'], ['pay', '🧾 المدفوعات والمعاملات المالية'], ['codes', '🏷️ أكواد الخصم'], ['notifs', '🔔 الإشعارات'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
 const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, p, v) => { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k] = a[k] || {}); a[ks.at(-1)] = v; };
 async function saveS() { const { error } = await sb.from('site_settings').upsert({ key: 'site', value: S }); toast(error ? 'فشل الحفظ: ' + error.message : 'تم الحفظ ✓'); if (!error) loadSettingsTheme(); }
@@ -42,7 +42,7 @@ function tableEditor(table, title, fields, order = 'position') { // fields: [key
 }
 const fmtDT = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 const PERMS = [['users', 'إدارة الطلاب والمدرسين'], ['courses', 'إدارة الكورسات والمحتوى'], ['exams', 'إدارة الامتحانات'], ['support', 'الدعم الفني والرسائل'], ['website', 'إدارة الموقع'], ['logs', 'سجل النشاطات'], ['finance', 'الحسابات المالية'], ['reports', 'التقارير']];
-const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', subs: 'finance', pay: 'finance', codes: 'finance', sep: null };
+const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', subs: 'finance', pay: 'finance', codes: 'finance', notifs: 'ADMIN', sep: null };
 const can = k => !me ? false : me.role === 'admin' || (me.role === 'supervisor' && (PERM_OF[k] === null || (PERM_OF[k] !== 'ADMIN' && me.permissions && me.permissions[PERM_OF[k]])));
 function modal(html, onReady) {
   const o = document.createElement('div'); o.className = 'mdl'; o.innerHTML = `<div class="mdb"><button class="mdx" aria-label="إغلاق">✕</button>${html}</div>`; document.body.append(o);
@@ -303,8 +303,51 @@ const pages = {
         if (a === 't') { const { error } = await sb.from('discount_codes').update({ active: !r.active }).eq('id', r.id); error ? toast(error.message) : (toast('تم ✓'), show('codes')); return; }
         if (a === 'x') { if (!confirm('حذف الكود؟')) return; const { error } = await sb.from('discount_codes').delete().eq('id', r.id); error ? toast(error.message) : (toast('تم الحذف'), show('codes')); }
       } });
+  },
+  async notifs() {
+    const { data, error } = await sb.rpc('notif_batches');
+    if (error) throw error;
+    const rows = data || [];
+    const aud = { all: 'الكل (طلاب ومدرسون)', students: 'كل الطلاب', teachers: 'كل المدرسين', user: 'مستخدم محدد' };
+    root.querySelector('#pg').innerHTML = `<div class="row"><h1 style="flex:1">الإشعارات</h1><button class="btn y" id="addu">+ إشعار جديد</button></div>
+    <p class="muted">الإشعارات تظهر داخل المنصة فقط (زر الجرس في الهيدر وصفحة "الإشعارات")، بدون بريد أو رسائل SMS.</p>
+    <div class="tw"><table><thead><tr><th>العنوان</th><th>النص</th><th>المرسل إليه</th><th>التاريخ</th><th>المرسل</th><th>تمت القراءة</th><th></th></tr></thead><tbody>${rows.map(r => `<tr><td><b>${esc(r.title)}</b></td><td>${esc((r.body || '').slice(0, 60))}</td><td>${aud[r.audience] || esc(r.audience)}</td><td>${fmtDT(r.created_at)}</td><td>${esc(r.sender || '-')}</td><td><span class="tag ${+r.read_count ? '' : 'y'}">${r.read_count} / ${r.total}</span></td><td><button class="btn s r" data-del="${r.batch_id}">حذف</button></td></tr>`).join('') || '<tr><td colspan="7" class="muted" style="text-align:center">لا إشعارات مرسلة</td></tr>'}</tbody></table></div>`;
+    $('#addu').onclick = () => notifForm(() => show('notifs'));
+    $$('[data-del]').forEach(b => b.onclick = async () => {
+      if (!confirm('حذف هذا الإشعار من كل المستخدمين؟')) return;
+      const { error } = await sb.rpc('notif_delete', { p_batch: b.dataset.del });
+      error ? toast(error.message) : (toast('تم الحذف'), show('notifs'));
+    });
   }
 };
+function notifForm(done) {
+  modal(`<h2>إشعار جديد</h2>
+  <label>المرسل إليه</label><select id="na"><option value="all">الكل (طلاب ومدرسون)</option><option value="students">كل الطلاب</option><option value="teachers">كل المدرسين</option><option value="user">مستخدم محدد</option></select>
+  <div id="nuw" style="display:none"><label>المستخدم</label><select id="nu"><option value="">جاري التحميل...</option></select></div>
+  <label>العنوان</label><input id="nt" placeholder="مثال: صيانة مؤقتة الليلة">
+  <label>النص</label><textarea id="nb" rows="4"></textarea>
+  <label>رابط داخل المنصة (اختياري)</label><input id="nl" dir="ltr" placeholder="#/courses">
+  <p class="muted">يظهر للمستخدم في جرس الإشعارات فورًا عند فتح الموقع.</p>
+  <button class="btn" id="nsv" style="margin-top:12px">إرسال</button>`, (o, close) => {
+    const sel = o.querySelector('#na'), uw = o.querySelector('#nuw'), us = o.querySelector('#nu');
+    let loaded = false;
+    sel.onchange = async () => {
+      uw.style.display = sel.value === 'user' ? '' : 'none';
+      if (sel.value !== 'user' || loaded) return;
+      loaded = true;
+      const { data } = await sb.from('profiles').select('id,full_name,role').in('role', ['student', 'teacher']).order('full_name');
+      us.innerHTML = (data || []).map(p => `<option value="${p.id}">${esc(p.full_name)} (${roleAr[p.role] || p.role})</option>`).join('') || '<option value="">لا مستخدمين</option>';
+    };
+    o.querySelector('#nsv').onclick = async () => {
+      const title = o.querySelector('#nt').value.trim();
+      if (!title) return toast('اكتب عنوان الإشعار');
+      if (sel.value === 'user' && !us.value) return toast('اختر المستخدم');
+      const { error } = await sb.rpc('notif_send', { p_title: title, p_body: o.querySelector('#nb').value.trim(), p_audience: sel.value, p_user: sel.value === 'user' ? us.value : null, p_link: o.querySelector('#nl').value.trim() });
+      if (error) return toast(error.message);
+      toast('تم إرسال الإشعار ✓'); close(); done();
+    };
+  });
+}
 const money = n => (+n || 0).toLocaleString('ar-EG', { maximumFractionDigits: 2 }) + ' ج.م';
 const payMethodAr = { cash: 'نقدي', wallet: 'محفظة إلكترونية', bank: 'تحويل بنكي', other: 'أخرى' };
 const subAr = { active: 'نشط', stopped: 'موقوف', expired: 'منتهي' };

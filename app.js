@@ -1,6 +1,6 @@
 window.addEventListener('error', e => { const m = $('#app'); if (m && m.innerText.includes('جاري التحميل')) m.innerHTML = '<p style="text-align:center;margin-top:60px">حصل خطأ في التحميل، حدّث الصفحة. (' + esc(e.message || '') + ')</p>'; });
 const app = $('#app');
-let me = null, cats = [], stages = [], grades = [], subjects = [];
+let me = null, cats = [], stages = [], grades = [], subjects = [], unread = 0;
 const gradeName = id => (grades.find(g => g.id == id) || {}).name || '', subjName = id => (subjects.find(g => g.id == id) || {}).name || '';
 const catName = id => (cats.find(c => c.id == id) || {}).name || 'عام';
 const catIcon = id => (cats.find(c => c.id == id) || {}).icon || '📘';
@@ -18,6 +18,7 @@ function coverHtml(c) {
 }
 async function loadMe() {
   me = await getMe();
+  if (me) { try { const { count } = await sb.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', me.id).is('read_at', null); unread = count || 0; } catch (e) { unread = 0; } }
   const { data: c } = await sb.from('categories').select('*').order('id'); cats = c || [];
   const [a1, a2, a3] = await Promise.all([sb.from('stages').select('*').order('position'), sb.from('grades').select('*').order('position'), sb.from('subjects').select('*').order('position')]); stages = a1.data || []; grades = a2.data || []; subjects = a3.data || [];
   header();
@@ -28,7 +29,7 @@ function header() {
   $('#hdr').innerHTML = `<a class="logo" href="#/">${logo}</a>
   <div class="dd"><button class="ddb" id="ddb">تصفح الدورات <i>⌄</i></button><div class="ddm" id="ddm">${cats.map(c => `<a href="#/courses?cat=${c.id}">${c.icon || '📘'} ${esc(c.name)}</a>`).join('')}<hr><a href="#/courses">كل الكورسات</a><a href="#/instructors">المدرسون</a><a href="#/about">عن المنصة</a><a href="#/contact">اتصل بنا</a>${me && (me.role === 'admin' || me.role === 'supervisor') ? '<a href="admin.html">لوحة الإدارة</a>' : ''}</div></div>
   <form class="hs2" id="hs2"><button aria-label="بحث">🔍</button><input id="hq2" placeholder="ابحث عن دورات"></form>
-  <div class="auth">${me ? `<a href="#/dashboard" class="btn s o">لوحتي</a><a href="#/profile" class="who">${avatar(me, 34)}</a><span class="tag rl" style="margin:0 6px">${({ student: 'طالب', teacher: 'المدرس', admin: 'المدير', supervisor: 'المشرف' })[me.role] || ''}</span><button class="btn g s" id="out">خروج</button>` : '<a class="btn g" href="#/login">تسجيل الدخول</a><a class="btn" href="#/register">إنشاء حساب</a>'}</div>`;
+  <div class="auth">${me ? `<a href="#/dashboard" class="btn s o">لوحتي</a><a href="#/notifs" class="btn s o" title="الإشعارات" style="position:relative">🔔${unread ? `<span class="tag" style="position:absolute;top:-8px;inset-inline-start:-8px;font-size:11px;padding:0 5px;line-height:16px">${unread}</span>` : ''}</a><a href="#/profile" class="who">${avatar(me, 34)}</a><span class="tag rl" style="margin:0 6px">${({ student: 'طالب', teacher: 'المدرس', admin: 'المدير', supervisor: 'المشرف' })[me.role] || ''}</span><button class="btn g s" id="out">خروج</button>` : '<a class="btn g" href="#/login">تسجيل الدخول</a><a class="btn" href="#/register">إنشاء حساب</a>'}</div>`;
   $('#ddb').onclick = e => { e.stopPropagation(); $('#ddm').classList.toggle('open'); };
   document.onclick = () => { const m = $('#ddm'); if (m) m.classList.remove('open'); };
   $('#hs2').onsubmit = e => { e.preventDefault(); location.hash = `#/courses?s=${encodeURIComponent($('#hq2').value)}`; };
@@ -413,9 +414,19 @@ async function faqPage() {
   app.innerHTML = `<h1>الأسئلة الشائعة</h1>${(data || []).map(f => `<details class="box fq"><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('') || '<p class="muted">لا أسئلة.</p>'}`;
 }
 
+async function notifsPage() {
+  if (needLogin()) return;
+  const { data, error } = await sb.from('notifications').select('id,title,body,link,created_at,read_at').eq('user_id', me.id).order('created_at', { ascending: false }).limit(100);
+  const rows = data || [];
+  const nw = rows.filter(r => !r.read_at).length;
+  const html = `<h1>الإشعارات ${nw ? `<span class="tag y">${nw} جديد</span>` : ''}</h1>` + (error ? `<div class="box">${esc(arErr(error.message))}</div>` : rows.length ? rows.map(n => `<div class="box" style="${n.read_at ? '' : 'border-inline-start:4px solid var(--p)'}"><div class="row" style="justify-content:space-between"><b>${esc(n.title)}</b><span class="muted">${fmtDate(n.created_at)}</span></div>${n.body ? `<p style="white-space:pre-wrap;margin:8px 0 0">${esc(n.body)}</p>` : ''}${n.link ? `<a class="btn s o" style="margin-top:10px" href="${esc(n.link)}">فتح</a>` : ''}</div>`).join('') : '<div class="box"><p class="muted">لا إشعارات بعد.</p></div>');
+  if (me.role === 'student' || me.role === 'teacher') shellPage('#/notifs', html);
+  else { const q = document.getElementById('qa'); if (q) q.innerHTML = ''; document.body.classList.remove('hasrail'); app.innerHTML = html; footer(); }
+  if (nw) { await sb.from('notifications').update({ read_at: new Date().toISOString() }).eq('user_id', me.id).is('read_at', null); unread = 0; header(); }
+}
 const MENUS = {
-  student: [['#/dashboard', '🏠', 'الرئيسية'], ['#/courses', '📚', 'تصفح الكورسات'], ['#/s/courses', '🎓', 'كورساتي'], ['#/s/sub', '💳', 'اشتراكي'], ['#/s/lectures', '🎬', 'المحاضرات'], ['#/s/exams', '📝', 'الامتحانات'], ['#/s/homework', '📚', 'الواجبات'], ['#/s/results', '📊', 'نتائجي ودرجاتي'], ['#/s/progress', '📈', 'تقدمي الدراسي'], ['#/s/certs', '🏅', 'شهاداتي'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']],
-  teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/exams', '📝', 'الامتحانات'], ['#/t/qbank', '🏦', 'بنك الأسئلة'], ['#/t/homework', '📚', 'الواجبات'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
+  student: [['#/dashboard', '🏠', 'الرئيسية'], ['#/courses', '📚', 'تصفح الكورسات'], ['#/s/courses', '🎓', 'كورساتي'], ['#/s/sub', '💳', 'اشتراكي'], ['#/s/lectures', '🎬', 'المحاضرات'], ['#/s/exams', '📝', 'الامتحانات'], ['#/s/homework', '📚', 'الواجبات'], ['#/s/results', '📊', 'نتائجي ودرجاتي'], ['#/s/progress', '📈', 'تقدمي الدراسي'], ['#/s/certs', '🏅', 'شهاداتي'], ['#/notifs', '🔔', 'الإشعارات'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']],
+  teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/exams', '📝', 'الامتحانات'], ['#/t/qbank', '🏦', 'بنك الأسئلة'], ['#/t/homework', '📚', 'الواجبات'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/notifs', '🔔', 'الإشعارات'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
 };
 function roleMenu(active) {
   applyRoleRail(active);
@@ -563,6 +574,7 @@ async function route() {
       case 'cert': return await cert(p[1]);
       case 'edit': return await edit(p[1]);
       case 's': return await sPage(p[1]);
+      case 'notifs': return await notifsPage();
       case 't': return await tPage(p[1]);
       case 'settings': await profilePage(); { const n = $('#np'); if (n) n.scrollIntoView({ block: 'center' }); } return;
       case 'teacher': if (needLogin()) return; return await teacherDash(p[1]);
