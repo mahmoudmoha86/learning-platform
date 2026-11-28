@@ -87,7 +87,7 @@ async function accountsPage(kind) {
     return p;
   });
   const lbl = { student: 'طالب', teacher: 'مدرس', staff: 'موظف' }[kind];
-  const stTag = r => r.suspended ? '<span class="tag" style="background:#fdeaea;color:#b42318">موقوف</span>' : '<span class="tag" style="background:#e6f6ea;color:#067647">نشط</span>';
+  const stTag = r => r.suspended ? '<span class="tag" style="background:#fdeaea;color:#b42318">موقوف</span>' : (r.approved === false ? '<span class="tag" style="background:#fff4e5;color:#b54708">⏳ قيد المراجعة</span>' : '<span class="tag" style="background:#e6f6ea;color:#067647">نشط</span>');
   const common = [{ l: 'الاسم', v: r => `<b>${esc(r.full_name)}</b>`, s: r => r.full_name }, { l: 'البريد', v: r => esc(r.email), s: r => r.email }, { l: 'الهاتف', v: r => esc(r.phone || '-'), s: r => r.phone || '' }];
   const cols = kind === 'student' ? [...common, { l: 'الكورسات', v: r => r.nc, s: r => r.nc }, { l: 'متوسط التقدم', v: r => r.avg + '%', s: r => r.avg }, { l: 'الحالة', v: stTag, s: r => r.suspended }, { l: 'التسجيل', v: r => fmtDate(r.created_at), s: r => r.created_at }]
     : kind === 'teacher' ? [...common, { l: 'الكورسات', v: r => r.nc, s: r => r.nc }, { l: 'الطلاب', v: r => r.ns, s: r => r.ns }, { l: 'التقييم', v: r => r.rating ? '★ ' + r.rating : '-', s: r => r.rating }, { l: 'الحالة', v: stTag, s: r => r.suspended }]
@@ -115,6 +115,7 @@ async function accountsPage(kind) {
         const upd = { full_name: name, phone: o.querySelector('#fp').value || null };
         if (kind === 'teacher') { upd.title = o.querySelector('#ft').value || null; upd.bio = o.querySelector('#fb').value || null; upd.permissions = perms; }
         if (kind === 'staff') { upd.permissions = perms; if (r.id !== me.id) upd.role = role; } else if (o.querySelector('#fr')) upd.role = role;
+        if (upd.role === 'teacher') upd.approved = true;
         const { error } = await sb.from('profiles').update(upd).eq('id', r.id); if (error) return toast(error.message); toast('تم الحفظ بنجاح ✓'); close(); reload();
       }
     };
@@ -128,11 +129,12 @@ async function accountsPage(kind) {
     });
   const pwForm = r => modal(`<h2>إعادة تعيين كلمة المرور</h2><p class="muted">${esc(r.full_name)}</p><label>كلمة المرور الجديدة (6 أحرف على الأقل)</label><input id="np" type="text" dir="ltr" autocomplete="off"><button class="btn" id="npb" style="margin-top:10px">تعيين</button>`, (o, close) => { o.querySelector('#npb').onclick = async () => { const { error } = await call('admin_reset_password', { p_user: r.id, p_password: o.querySelector('#np').value }, 'تم تغيير كلمة المرور بنجاح ✓'); if (!error) close(); }; });
   dtable({ title: { student: 'إدارة الطلاب', teacher: 'إدارة المدرسين', staff: 'الموظفون والصلاحيات' }[kind], rows, cols, search: r => `${r.full_name} ${r.email} ${r.phone || ''}`,
-    filters: [{ l: 'الحالة', opts: [['a', 'نشط'], ['s', 'موقوف']], f: (r, v) => v === 's' ? r.suspended : !r.suspended }],
+    filters: [{ l: 'الحالة', opts: kind === 'teacher' ? [['a', 'نشط'], ['p', 'قيد المراجعة'], ['s', 'موقوف']] : [['a', 'نشط'], ['s', 'موقوف']], f: (r, v) => v === 's' ? r.suspended : v === 'p' ? r.approved === false : (!r.suspended && r.approved !== false) }],
     add: `<button class="btn y" id="addu">+ إضافة ${lbl}</button>`, onReady: b => b.querySelector('#addu').onclick = () => openForm(null),
-    actions: r => [['d', 'تفاصيل'], ['e', 'تعديل'], ['p', 'كلمة المرور'], r.suspended ? ['t', 'تفعيل', 'y'] : ['t', 'إيقاف', 'o'], ['x', 'حذف', 'r']].filter(a => !(kind === 'staff' && a[0] === 'd')),
+    actions: r => [['d', 'تفاصيل'], ['e', 'تعديل'], ['p', 'كلمة المرور'], ...(kind === 'teacher' && r.approved === false ? [['a', 'قبول', 'y']] : []), r.suspended ? ['t', 'تفعيل', 'y'] : ['t', 'إيقاف', 'o'], ['x', 'حذف', 'r']].filter(a => !(kind === 'staff' && a[0] === 'd')),
     onAct: async (a, r) => {
       if (a === 'd') return details(r); if (a === 'e') return openForm(r); if (a === 'p') return pwForm(r);
+      if (a === 'a') { if (!confirm(`قبول حساب المدرس ${r.full_name}؟ هيقدر ينشر كورساته بعد القبول.`)) return; const { error } = await sb.from('profiles').update({ approved: true }).eq('id', r.id); error ? toast(error.message) : (toast('تم قبول المدرس ✓'), reload()); return; }
       if (a === 't') { if (r.id === me.id) return toast('لا يمكنك إيقاف حسابك'); if (!r.suspended && !confirm(`إيقاف حساب ${r.full_name}؟ لن يتمكن من الدخول.`)) return; const { error } = await sb.from('profiles').update({ suspended: !r.suspended }).eq('id', r.id); error ? toast(error.message) : (toast(r.suspended ? 'تم تفعيل الحساب ✓' : 'تم إيقاف الحساب ✓'), reload()); }
       if (a === 'x') { if (!confirm(`حذف حساب ${r.full_name} نهائيًا؟ لا يمكن التراجع.`)) return; const { error } = await call('admin_delete_user', { p_user: r.id }, 'تم حذف الحساب ✓'); if (!error) reload(); }
     } });

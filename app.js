@@ -283,8 +283,9 @@ function authForm(reg) {
     };
   };
   const step3 = () => {
-    app.innerHTML = `<div class="afm" style="text-align:center"><h1>إنشاء حساب جديد</h1>${stepper(3)}<div style="font-size:4rem">🎉</div><h2>أهلاً بيك يا ${esc(d.fn)}!</h2><p class="muted">تم إنشاء حسابك بنجاح. تقدر تكمل بياناتك (الصورة والنبذة) من صفحة حسابك.</p>
-    <a class="btn big2" href="#/dashboard">ابدأ رحلتك</a><a class="btn o big2" href="#/profile" style="margin-top:8px">أكمل بيانات حسابي</a></div>`;
+    const t = d.role === 'teacher';
+    app.innerHTML = `<div class="afm" style="text-align:center"><h1>إنشاء حساب جديد</h1>${stepper(3)}<div style="font-size:4rem">${t ? '⏳' : '🎉'}</div><h2>أهلاً بيك يا ${esc(d.fn)}!</h2><p class="muted">${t ? 'تم إنشاء حسابك. حساب المدرس بيتراجع من الإدارة الأول، وبعد الموافقة تقدر تنشر كورساتك. تقدر تكمل بياناتك من صفحة حسابك.' : 'تم إنشاء حسابك بنجاح. تقدر تكمل بياناتك (الصورة والنبذة) من صفحة حسابك.'}</p>
+    <a class="btn big2" href="${t ? '#/profile' : '#/dashboard'}">${t ? 'أكمل بيانات حسابي' : 'ابدأ رحلتك'}</a><a class="btn o big2" href="#/" style="margin-top:8px">الصفحة الرئيسية</a></div>`;
   };
   step1();
 }
@@ -378,7 +379,7 @@ async function edit(id) {
   $('#aq').onclick = async () => { const o = [0, 1, 2, 3].map(i => $('#o' + i).value.trim()).filter(Boolean); if (!$('#qt').value || o.length < 2) return toast('اكتب السؤال واختيارين على الأقل'); const a = +$('#qa').value; if (a >= o.length) return toast('رقم الإجابة غير صحيح'); const { error } = await sb.from('quiz_questions').insert({ course_id: id, question: $('#qt').value, options: o, answer: a, position: (qs || []).length + 1 }); error ? toast(error.message) : edit(id); };
 }
 async function instructors() {
-  const { data } = await sb.from('profiles').select(PCOLS).eq('role', 'teacher').eq('suspended', false);
+  const { data } = await sb.from('profiles').select(PCOLS).eq('role', 'teacher').eq('suspended', false).eq('approved', true);
   app.innerHTML = `<h1>المدرسون</h1><div class="grid">${(data || []).map(t => `<a class="card" href="#/instructor/${t.id}"><div class="bd" style="align-items:center;text-align:center">${avatar(t, 80)}<b>${esc(t.full_name)}</b><span class="muted">${esc(t.title || 'مدرس')}</span><p class="muted">${esc((t.bio || '').slice(0, 90))}</p></div></a>`).join('') || '<p class="muted">لا يوجد مدرسون بعد.</p>'}</div>`;
 }
 async function instructor(id) {
@@ -517,12 +518,18 @@ async function tPage(kind) {
   if (!html) return teacherDash();
   shellPage(act, html);
 }
+function pendingTeacherPage() {
+  const q = document.getElementById('qa'); if (q) q.innerHTML = ''; document.body.classList.remove('hasrail');
+  app.innerHTML = `<div class="afm" style="text-align:center"><div style="font-size:4rem">⏳</div><h1>حسابك قيد المراجعة</h1><p class="muted">حساب المدرس بيتراجع من الإدارة قبل ما تقدر تنشر كورساتك. هنبلغك أول ما يتم القبول.</p><a class="btn big2" href="#/profile">أكمل بيانات حسابي</a></div>`;
+  footer();
+}
 async function route() {
   quick();
   const [path, q] = (location.hash.slice(1) || '/').split('?'); const p = path.split('/').filter(Boolean);
   window.scrollTo(0, 0);
   try {
     if (!p.length) return await home(q);
+    if (me && me.role === 'teacher' && me.approved === false && !['profile', 'settings', 'login', 'register'].includes(p[0])) return pendingTeacherPage();
     switch (p[0]) {
       case 'courses': return await courses(q);
       case 'course': return await course(p[1]);

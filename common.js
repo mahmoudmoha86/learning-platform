@@ -1,7 +1,7 @@
 const sb = supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const PCOLS = 'id,full_name,role,bio,avatar_url,created_at,title,suspended,permissions';
+const PCOLS = 'id,full_name,role,bio,avatar_url,created_at,title,suspended,permissions,approved';
 const arErr = m => { m = String(m || ''); const t = [[/row-level security|permission denied|42501/i, 'ليس لديك صلاحية لهذه العملية'], [/Invalid login credentials/i, 'البريد الإلكتروني أو كلمة المرور غير صحيحة'], [/banned|suspended/i, 'هذا الحساب موقوف، تواصل مع الإدارة'], [/already registered|already been registered/i, 'هذا البريد مسجّل بالفعل'], [/duplicate key/i, 'هذا العنصر موجود بالفعل'], [/Failed to fetch|NetworkError/i, 'تعذّر الاتصال بالخادم، تحقق من الإنترنت'], [/violates foreign key/i, 'لا يمكن تنفيذ العملية لوجود بيانات مرتبطة'], [/Password should be at least/i, 'كلمة المرور قصيرة (6 أحرف على الأقل)'], [/rate limit/i, 'محاولات كثيرة، حاول بعد قليل']]; for (const [r, a] of t) if (r.test(m)) return a; return m; };
 const toast = m => { m = arErr(m); const d = document.createElement('div'); d.className = 'toast'; d.textContent = m; document.body.append(d); setTimeout(() => d.remove(), 2400); };
 const roleAr = { student: 'طالب', teacher: 'مدرس', admin: 'أدمن', supervisor: 'مشرف' };
