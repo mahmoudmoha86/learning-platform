@@ -29,7 +29,7 @@ function header() {
   $('#hdr').innerHTML = `<a class="logo" href="#/">${logo}</a>
   <div class="dd"><button class="ddb" id="ddb">تصفح الدورات <i>⌄</i></button><div class="ddm" id="ddm">${cats.map(c => `<a href="#/courses?cat=${c.id}">${c.icon || '📘'} ${esc(c.name)}</a>`).join('')}<hr><a href="#/courses">كل الكورسات</a><a href="#/instructors">المدرسون</a><a href="#/about">عن المنصة</a><a href="#/contact">اتصل بنا</a>${me && (me.role === 'admin' || me.role === 'supervisor') ? '<a href="admin.html">لوحة الإدارة</a>' : ''}</div></div>
   <form class="hs2" id="hs2"><button aria-label="بحث">🔍</button><input id="hq2" placeholder="ابحث عن دورات"></form>
-  <div class="auth">${me ? `<a href="#/dashboard" class="btn s o">لوحتي</a><a href="#/notifs" class="btn s o" title="الإشعارات" style="position:relative">🔔${unread ? `<span class="tag" style="position:absolute;top:-8px;inset-inline-start:-8px;font-size:11px;padding:0 5px;line-height:16px">${unread}</span>` : ''}</a><a href="#/profile" class="who">${avatar(me, 34)}</a><button class="btn g s" id="out">خروج</button>` : '<a class="btn g" href="#/login">تسجيل الدخول</a><a class="btn" href="#/register">إنشاء حساب</a>'}</div>`;
+  <div class="auth">${me ? `<a href="#/dashboard" class="btn s o">لوحتي</a><a href="#/profile" class="who">${avatar(me, 34)}</a><button class="btn g s" id="out">خروج</button>` : '<a class="btn g" href="#/login">تسجيل الدخول</a><a class="btn" href="#/register">إنشاء حساب</a>'}</div>`;
   $('#ddb').onclick = e => { e.stopPropagation(); $('#ddm').classList.toggle('open'); };
   document.onclick = () => { const m = $('#ddm'); if (m) m.classList.remove('open'); };
   $('#hs2').onsubmit = e => { e.preventDefault(); location.hash = `#/courses?s=${encodeURIComponent($('#hq2').value)}`; };
@@ -469,7 +469,7 @@ function applyRoleRail(active) {
   const items = MENUS[me.role === 'student' ? 'student' : 'teacher'].slice();
   if (me.role === 'admin' || me.role === 'supervisor') items.push(['admin.html', '🛡️', 'لوحة الإدارة']);
   items.push(['#/login', '🚪', 'تسجيل الخروج']);
-  r.innerHTML = `<a class="rlogo" href="#/"><span class="lg">🎓</span><span>${esc(S.name || 'منصة تعلّم')}</span></a>` + items.map(([h, i, l]) => `<a href="${h}" class="${h === active ? 'act' : ''}" ${h === '#/login' ? 'id="lo2"' : ''} title="${l}"><b class="ri">${i}</b><span>${l}</span></a>`).join('');
+  r.innerHTML = `<a class="rlogo" href="#/"><span class="lg">🎓</span><span>${esc(S.name || 'منصة تعلّم')}</span></a>` + items.map(([h, i, l]) => `<a href="${h}" class="${h === active ? 'act' : ''}" ${h === '#/login' ? 'id="lo2"' : ''} title="${l}"><b class="ri">${i}</b><span>${l}</span>${h === '#/notifs' && unread ? `<span class="tag" style="margin-inline-start:auto;font-size:11px">${unread}</span>` : ''}</a>`).join('');
   const o = r.querySelector('#lo2'); if (o) o.onclick = async e => { e.preventDefault(); await sb.auth.signOut(); me = null; location.hash = '#/login'; await loadMe(); header(); route(); };
 }
 function shellPage(active, inner) {
