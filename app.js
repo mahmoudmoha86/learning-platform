@@ -423,9 +423,39 @@ async function notifsPage() {
   else { const q = document.getElementById('qa'); if (q) q.innerHTML = ''; document.body.classList.remove('hasrail'); app.innerHTML = html; footer(); }
   if (nw) { await sb.from('notifications').update({ read_at: new Date().toISOString() }).eq('user_id', me.id).is('read_at', null); unread = 0; header(); }
 }
+const TK_ST = { open: 'مفتوحة', answered: 'تم الرد', closed: 'مغلقة' };
+const TK_PR = { low: 'منخفضة', normal: 'عادية', high: 'عاجلة' };
+async function supportPage(id) {
+  if (needLogin()) return;
+  if (!id) {
+    const { data } = await sb.from('tickets').select('id,subject,priority,status,created_at,updated_at').eq('user_id', me.id).order('updated_at', { ascending: false });
+    const rows = data || [];
+    const html = `<h1>الدعم الفني</h1>
+    <div class="box"><h3>تذكرة جديدة</h3><label>الموضوع</label><input id="ts" placeholder="مثال: مشكلة في فتح المحاضرة"><label>الأهمية</label><select id="tp">${Object.entries(TK_PR).map(([k, v]) => `<option value="${k}" ${k === 'normal' ? 'selected' : ''}>${v}</option>`).join('')}</select><label>تفاصيل المشكلة</label><textarea id="tb" rows="4"></textarea><button class="btn y" id="tsend">إرسال التذكرة</button></div>
+    <h2>تذاكري</h2>${rows.length ? `<div class="tw"><table><tr><th>الموضوع</th><th>الأهمية</th><th>الحالة</th><th>آخر تحديث</th><th></th></tr>${rows.map(t => `<tr><td>${esc(t.subject)}</td><td>${TK_PR[t.priority] || ''}</td><td><span class="tag ${t.status === 'open' ? 'y' : ''}">${TK_ST[t.status] || ''}</span></td><td>${fmtDate(t.updated_at)}</td><td><a class="btn s o" href="#/support/${t.id}">فتح</a></td></tr>`).join('')}</table></div>` : '<p class="muted">لا تذاكر بعد.</p>'}`;
+    shellPage('#/support', html);
+    $('#tsend').onclick = async () => {
+      const subject = $('#ts').value.trim(), body = $('#tb').value.trim();
+      if (!subject) return toast('اكتب الموضوع');
+      if (!body) return toast('اكتب تفاصيل المشكلة');
+      const { data, error } = await sb.rpc('ticket_new', { p_subject: subject, p_body: body, p_priority: $('#tp').value });
+      if (error) return toast(error.message);
+      toast('تم إرسال التذكرة ✓'); location.hash = '#/support/' + data;
+    };
+    return;
+  }
+  const { data: t } = await sb.from('tickets').select('id,subject,priority,status,created_at').eq('id', id).maybeSingle();
+  if (!t) { app.innerHTML = '<div class="box"><h2>التذكرة غير موجودة</h2><a class="btn" href="#/support">رجوع</a></div>'; return; }
+  const { data: ms } = await sb.from('ticket_messages').select('id,author_role,body,created_at').eq('ticket_id', id).order('created_at');
+  const html = `<h1>${esc(t.subject)} <span class="tag ${t.status === 'open' ? 'y' : ''}">${TK_ST[t.status] || ''}</span></h1><a class="btn s o" href="#/support">رجوع للتذاكر</a>
+  <div style="margin-top:14px">${(ms || []).map(m => `<div class="box" style="${m.author_role === 'admin' ? 'border-inline-start:4px solid var(--p)' : ''}"><div class="row" style="justify-content:space-between"><b>${m.author_role === 'admin' ? 'الدعم الفني' : 'أنا'}</b><span class="muted">${fmtDate(m.created_at)}</span></div><p style="white-space:pre-wrap;margin:8px 0 0">${esc(m.body)}</p></div>`).join('')}</div>
+  ${t.status === 'closed' ? '<p class="muted">التذكرة مغلقة. لو محتاج حاجة تانية اعمل تذكرة جديدة.</p>' : `<div class="box"><label>ردك</label><textarea id="tr" rows="3"></textarea><button class="btn" id="trs">إرسال</button></div>`}`;
+  shellPage('#/support', html);
+  const b = $('#trs'); if (b) b.onclick = async () => { const v = $('#tr').value.trim(); if (!v) return toast('اكتب الرسالة'); const { error } = await sb.rpc('ticket_reply', { p_ticket: id, p_body: v }); if (error) return toast(error.message); toast('تم الإرسال ✓'); supportPage(id); };
+}
 const MENUS = {
-  student: [['#/dashboard', '🏠', 'الرئيسية'], ['#/courses', '📚', 'تصفح الكورسات'], ['#/s/courses', '🎓', 'كورساتي'], ['#/s/sub', '💳', 'اشتراكي'], ['#/s/lectures', '🎬', 'المحاضرات'], ['#/s/exams', '📝', 'الامتحانات'], ['#/s/homework', '📚', 'الواجبات'], ['#/s/results', '📊', 'نتائجي ودرجاتي'], ['#/s/progress', '📈', 'تقدمي الدراسي'], ['#/s/certs', '🏅', 'شهاداتي'], ['#/notifs', '🔔', 'الإشعارات'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']],
-  teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/exams', '📝', 'الامتحانات'], ['#/t/qbank', '🏦', 'بنك الأسئلة'], ['#/t/homework', '📚', 'الواجبات'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/notifs', '🔔', 'الإشعارات'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
+  student: [['#/dashboard', '🏠', 'الرئيسية'], ['#/courses', '📚', 'تصفح الكورسات'], ['#/s/courses', '🎓', 'كورساتي'], ['#/s/sub', '💳', 'اشتراكي'], ['#/s/lectures', '🎬', 'المحاضرات'], ['#/s/exams', '📝', 'الامتحانات'], ['#/s/homework', '📚', 'الواجبات'], ['#/s/results', '📊', 'نتائجي ودرجاتي'], ['#/s/progress', '📈', 'تقدمي الدراسي'], ['#/s/certs', '🏅', 'شهاداتي'], ['#/notifs', '🔔', 'الإشعارات'], ['#/support', '🎫', 'الدعم الفني'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']],
+  teacher: [['#/dashboard', '▦', 'لوحة التحكم'], ['#/t/courses', '📚', 'كورساتي'], ['#/t/lectures', '🎬', 'إدارة المحاضرات'], ['#/t/students', '👥', 'إدارة الطلاب'], ['#/t/exams', '📝', 'الامتحانات'], ['#/t/qbank', '🏦', 'بنك الأسئلة'], ['#/t/homework', '📚', 'الواجبات'], ['#/t/results', '📊', 'نتائج الطلاب'], ['#/t/progress', '📈', 'متابعة تقدم الطلاب'], ['#/notifs', '🔔', 'الإشعارات'], ['#/support', '🎫', 'الدعم الفني'], ['#/profile', '👤', 'الملف الشخصي'], ['#/settings', '⚙️', 'الإعدادات']]
 };
 function roleMenu(active) {
   applyRoleRail(active);
@@ -574,6 +604,7 @@ async function route() {
       case 'edit': return await edit(p[1]);
       case 's': return await sPage(p[1]);
       case 'notifs': return await notifsPage();
+      case 'support': return await supportPage(p[1]);
       case 't': return await tPage(p[1]);
       case 'settings': await profilePage(); { const n = $('#np'); if (n) n.scrollIntoView({ block: 'center' }); } return;
       case 'teacher': if (needLogin()) return; return await teacherDash(p[1]);

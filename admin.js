@@ -1,5 +1,5 @@
 const root = $('#root'); let me = null, cur = 'overview';
-const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['subs', '💳 إدارة الاشتراكات'], ['pay', '🧾 المدفوعات والمعاملات المالية'], ['codes', '🏷️ أكواد الخصم'], ['notifs', '🔔 الإشعارات'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
+const SECTIONS = [['overview', '📊 لوحة التحكم الرئيسية'], ['students', '🎓 إدارة الطلاب'], ['teachers', '👨‍🏫 إدارة المدرسين'], ['courses', '📚 إدارة الكورسات'], ['lectures', '🎬 إدارة الأقسام والمحاضرات'], ['review', '✅ مراجعة المحتوى'], ['exams', '📝 الامتحانات وبنك الأسئلة'], ['homework', '📚 الواجبات'], ['subs', '💳 إدارة الاشتراكات'], ['pay', '🧾 المدفوعات والمعاملات المالية'], ['codes', '🏷️ أكواد الخصم'], ['notifs', '🔔 الإشعارات'], ['landing', '🌐 إدارة صفحة الزائر'], ['msgs', '📞 بيانات التواصل وإرسال الرسائل'], ['tickets', '🎫 تذاكر الدعم'], ['staff', '🛡️ إدارة الموظفين'], ['general', '⚙️ إعدادات المنصة'], ['sep', 'أقسام أخرى'], ['academic', '🏫 المراحل والصفوف والمواد'], ['cats', '🗂️ التصنيفات'], ['enr', '🧾 التسجيلات'], ['reviews', '⭐ التقييمات'], ['partners', '🤝 الشركاء'], ['about', 'ℹ️ عن المنصة'], ['legal', '📄 الشروط والخصوصية'], ['media', '🖼️ مكتبة الصور']];
 const get = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 const set = (o, p, v) => { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach(k => a = a[k] = a[k] || {}); a[ks.at(-1)] = v; };
 async function saveS() { const { error } = await sb.from('site_settings').upsert({ key: 'site', value: S }); toast(error ? 'فشل الحفظ: ' + error.message : 'تم الحفظ ✓'); if (!error) loadSettingsTheme(); }
@@ -42,7 +42,7 @@ function tableEditor(table, title, fields, order = 'position') { // fields: [key
 }
 const fmtDT = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 const PERMS = [['users', 'إدارة الطلاب والمدرسين'], ['courses', 'إدارة الكورسات والمحتوى'], ['exams', 'إدارة الامتحانات'], ['support', 'الدعم الفني والرسائل'], ['website', 'إدارة الموقع'], ['logs', 'سجل النشاطات'], ['finance', 'الحسابات المالية'], ['reports', 'التقارير']];
-const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', subs: 'finance', pay: 'finance', codes: 'finance', notifs: 'ADMIN', sep: null };
+const PERM_OF = { exams: 'exams', homework: 'exams', academic: 'courses', landing: 'website', overview: null, general: 'website', hero: 'website', tracks: 'website', features: 'website', faqs: 'website', testi: 'website', partners: 'website', about: 'website', contactset: 'website', legal: 'website', media: 'website', review: 'courses', courses: 'courses', cats: 'courses', reviews: 'courses', teachers: 'users', students: 'users', enr: 'users', msgs: 'support', tickets: 'support', logs: 'logs', staff: 'ADMIN', lectures: 'courses', roles: 'ADMIN', subs: 'finance', pay: 'finance', codes: 'finance', notifs: 'ADMIN', sep: null };
 const can = k => !me ? false : me.role === 'admin' || (me.role === 'supervisor' && (PERM_OF[k] === null || (PERM_OF[k] !== 'ADMIN' && me.permissions && me.permissions[PERM_OF[k]])));
 function modal(html, onReady) {
   const o = document.createElement('div'); o.className = 'mdl'; o.innerHTML = `<div class="mdb"><button class="mdx" aria-label="إغلاق">✕</button>${html}</div>`; document.body.append(o);
@@ -318,8 +318,33 @@ const pages = {
       const { error } = await sb.rpc('notif_delete', { p_batch: b.dataset.del });
       error ? toast(error.message) : (toast('تم الحذف'), show('notifs'));
     });
+  },
+  async tickets() {
+    const { data } = await sb.from('tickets').select('*,profiles!user_id(full_name,role)').order('updated_at', { ascending: false });
+    const rows = data || [];
+    const cnt = k => rows.filter(r => r.status === k).length;
+    dtable({ title: 'تذاكر الدعم', rows, search: r => `${r.subject} ${r.profiles?.full_name || ''}`,
+      filters: [{ l: 'الحالة', opts: [['o', 'مفتوحة'], ['a', 'تم الرد'], ['c', 'مغلقة']], f: (r, v) => v === 'o' ? r.status === 'open' : v === 'a' ? r.status === 'answered' : r.status === 'closed' }],
+      cols: [{ l: 'الموضوع', v: r => `<b>${esc(r.subject)}</b>`, s: r => r.subject }, { l: 'المستخدم', v: r => esc(r.profiles?.full_name || '-'), s: r => r.profiles?.full_name || '' }, { l: 'الأهمية', v: r => TK_PR[r.priority] || '', s: r => r.priority }, { l: 'الحالة', v: r => `<span class="tag ${r.status === 'open' ? 'y' : ''}">${TK_ST[r.status] || ''}</span>`, s: r => r.status }, { l: 'آخر تحديث', v: r => fmtDT(r.updated_at), s: r => r.updated_at }],
+      add: `<span class="tag y">مفتوحة: ${cnt('open')}</span> <span class="tag">تم الرد: ${cnt('answered')}</span> <span class="tag">مغلقة: ${cnt('closed')}</span>`,
+      actions: r => [['v', 'فتح', ''], r.status === 'closed' ? ['o', 'إعادة فتح', 'y'] : ['c', 'إغلاق', 'o'], ['x', 'حذف', 'r']],
+      onAct: async (a, r) => {
+        if (a === 'v') return ticketView(r, () => show('tickets'));
+        if (a === 'c' || a === 'o') { const { error } = await sb.rpc('ticket_status', { p_ticket: r.id, p_status: a === 'c' ? 'closed' : 'open' }); error ? toast(error.message) : (toast('تم ✓'), show('tickets')); return; }
+        if (a === 'x') { if (!confirm('حذف التذكرة نهائيًا؟')) return; const { error } = await sb.from('tickets').delete().eq('id', r.id); error ? toast(error.message) : (toast('تم الحذف'), show('tickets')); }
+      } });
   }
 };
+const TK_ST = { open: 'مفتوحة', answered: 'تم الرد', closed: 'مغلقة' };
+const TK_PR = { low: 'منخفضة', normal: 'عادية', high: 'عاجلة' };
+async function ticketView(t, done) {
+  const { data } = await sb.from('ticket_messages').select('*').eq('ticket_id', t.id).order('created_at');
+  const body = (data || []).map(m => `<div class="box" style="margin:8px 0;${m.author_role === 'admin' ? 'border-inline-start:4px solid var(--p)' : ''}"><div class="row" style="justify-content:space-between"><b>${m.author_role === 'admin' ? 'الدعم الفني' : 'المستخدم'}</b><span class="muted">${fmtDT(m.created_at)}</span></div><p style="white-space:pre-wrap;margin:8px 0 0">${esc(m.body)}</p></div>`).join('');
+  modal(`<h2>${esc(t.subject)}</h2><div class="muted">${esc(t.profiles?.full_name || '')} · ${TK_PR[t.priority] || ''} · ${TK_ST[t.status] || ''}</div><div style="max-height:340px;overflow:auto;margin:10px 0">${body || '<p class="muted">لا رسائل.</p>'}</div>${t.status === 'closed' ? '<p class="muted">التذكرة مغلقة.</p>' : '<label>رد الإدارة</label><textarea id="tvr" rows="3"></textarea><button class="btn" id="tvs">إرسال الرد</button>'}`, (o, close) => {
+    const s = o.querySelector('#tvs'); if (!s) return;
+    s.onclick = async () => { const v = o.querySelector('#tvr').value.trim(); if (!v) return toast('اكتب الرد'); const { error } = await sb.rpc('ticket_reply', { p_ticket: t.id, p_body: v }); if (error) return toast(error.message); toast('تم إرسال الرد ✓'); close(); done(); };
+  });
+}
 function notifForm(done) {
   modal(`<h2>إشعار جديد</h2>
   <label>المرسل إليه</label><select id="na"><option value="all">الكل (طلاب ومدرسون)</option><option value="students">كل الطلاب</option><option value="teachers">كل المدرسين</option><option value="user">مستخدم محدد</option></select>
